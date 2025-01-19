@@ -3,21 +3,21 @@ import { use, useMemo } from "react";
 import { Navigate } from "react-router";
 
 const RootNavigator: React.FC = () => {
-  const { IPTVView } = use(ConfigContext);
+  const { iptvView } = use(ConfigContext);
 
   const path = useMemo(() => {
     let baseURL = "/home";
-    if (!IPTVView?.filter) {
+    if (!iptvView?.filterType) {
       baseURL += "/country";
       return baseURL;
     }
-    baseURL += "/" + IPTVView.filter;
-    if (IPTVView.code) {
-      baseURL += "/" + IPTVView.code;
+    baseURL += "/" + iptvView.filterType;
+    if (iptvView.code) {
+      baseURL += "/" + iptvView.code;
     }
 
     return baseURL;
-  }, [IPTVView]);
+  }, [iptvView]);
 
   return <Navigate to={path} replace={true} />;
 };

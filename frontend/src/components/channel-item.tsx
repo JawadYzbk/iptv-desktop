@@ -17,7 +17,7 @@ const ChannelItem: React.FC<Props> = ({
   isVertical,
   isActive,
 }) => {
-  const { app } = use(ConfigContext);
+  const { config } = use(ConfigContext);
   const [src, setSrc] = useState(imageProxy(channel.logo));
 
   return (
@@ -53,7 +53,7 @@ const ChannelItem: React.FC<Props> = ({
           isVertical ? "line-clamp-2" : "truncate text-center"
         } min-w-0`}
       >
-        {app?.iptv.isUseAltChannelName
+        {config?.iptv.isUseAltChannelName
           ? channel.alt_names?.[0] ?? channel.name
           : channel.name}
       </h3>

@@ -23,6 +23,7 @@ import { FixedSizeList } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { useDebounce } from "use-debounce";
 import { Separator } from "../../../components/ui/separator";
+import { service } from "wailsjs/go/models";
 
 interface SubNavItem {
   label: string;
@@ -43,7 +44,7 @@ const AppNav: React.FC = () => {
       setSearch("");
     }
     switch (filterType) {
-      case "country":
+      case service.IPTVFilter.COUNTRY:
         let res = await GetAllCountry();
         if (res.error) {
           setSubmenus([]);
@@ -64,7 +65,7 @@ const AppNav: React.FC = () => {
         }
         break;
 
-      case "category":
+      case service.IPTVFilter.CATEGORY:
         const resCat = await GetAllCategory();
         if (resCat.error) {
           setSubmenus([]);
@@ -81,7 +82,7 @@ const AppNav: React.FC = () => {
         }
         break;
 
-      case "language":
+      case service.IPTVFilter.LANGUAGE:
         const resLang = await GetAllLanguage();
         if (resLang.error) {
           setSubmenus([]);

@@ -8,6 +8,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 )
 
 //go:embed all:frontend/dist
@@ -15,15 +16,21 @@ var assets embed.FS
 
 func main() {
 	app := NewApp()
-	configStore, err := service.NewConfigStore()
+	db, err := service.NewDB()
 	if err != nil {
 		log.Fatalln(err)
 	}
-	cacheStore, err := service.NewCacheStore(configStore.GetApp().IPTV.CacheDuration)
+	defer db.Close()
+
+	configStore, err := service.NewConfigStore(db)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	iptv, err := service.NewIPTV(*configStore.GetApp().IPTV.ApiUrl, cacheStore, &app.ctx)
+	cacheStore, err := service.NewCacheStore(configStore.GetConfig().IPTV.CacheDuration)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	iptv, err := service.NewIPTV(configStore.GetConfig().IPTV.ApiUrl, cacheStore, &app.ctx)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -34,15 +41,18 @@ func main() {
 	}
 
 	err = wails.Run(&options.App{
-		Title:  "IPTV Desktop",
-		Width:  1280,
-		Height: 720,
+		Title:            "IPTV Desktop",
+		Width:            1280,
+		Height:           720,
+		WindowStartState: options.Maximised,
+		StartHidden:      true,
 		AssetServer: &assetserver.Options{
 			Assets:     assets,
 			Middleware: proxy.Middleware,
 		},
 		BackgroundColour: &options.RGBA{R: 9, G: 9, B: 16, A: 1},
 		OnStartup:        app.startup,
+		OnDomReady:       app.onDomReady,
 		Bind: []interface{}{
 			app,
 			cacheStore,
@@ -59,6 +69,9 @@ func main() {
 		DragAndDrop: &options.DragAndDrop{
 			EnableFileDrop:     false,
 			DisableWebViewDrop: true,
+		},
+		Linux: &linux.Options{
+			WebviewGpuPolicy: linux.WebviewGpuPolicyAlways,
 		},
 	})
 

@@ -1,13 +1,14 @@
 import Spinner from "@/components/spinner";
-import { useEffect } from "react";
+import { use, useEffect } from "react";
 import { useParams } from "react-router";
 import { service } from "wailsjs/go/models";
-import { Save, SetIPTVView } from "wailsjs/go/service/ConfigStore";
 import ChannelItem from "@/components/channel-item";
 import { GridConfig, useGrid } from "@/hooks/use-grid";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList } from "react-window";
 import { useChannelList } from "@/hooks/use-channel-list";
+import ConfigContext, { IPTVView } from "@/context/config.context";
+import { InfoIcon, MilestoneIcon } from "lucide-react";
 
 const gridConfig: GridConfig = {
   default: 2,
@@ -19,19 +20,17 @@ const gridConfig: GridConfig = {
 };
 
 const Home: React.FC = () => {
+  const { doSetIptvView } = use(ConfigContext);
   const { filterType, code } = useParams();
   const { isLoading, channels } = useChannelList(filterType, code);
 
   useEffect(() => {
     if (filterType && code) {
-      (async () => {
-        const view = new service.IPTVViewConfig();
-        view.filter = filterType;
-        view.code = code;
-
-        await SetIPTVView(view);
-        await Save();
-      })();
+      const view: IPTVView = {
+        filterType: filterType as service.IPTVFilter,
+        code,
+      };
+      doSetIptvView(view);
     }
   }, [filterType, code]);
 
@@ -39,7 +38,18 @@ const Home: React.FC = () => {
 
   return (
     <main className="flex-1">
-      {isLoading ? (
+      {code === undefined ? (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center text-primary space-y-4">
+            <span>
+              <MilestoneIcon className="w-12 h-12 inline-block" />
+            </span>
+            <p className="font-bold">
+              Choose a {filterType?.toLowerCase()} first!
+            </p>
+          </div>
+        </div>
+      ) : isLoading ? (
         <Spinner />
       ) : (
         <AutoSizer>

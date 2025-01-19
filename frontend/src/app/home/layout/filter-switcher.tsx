@@ -20,21 +20,22 @@ import {
 } from "@/components/ui/sidebar";
 import React, { useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
+import { service } from "wailsjs/go/models";
 
 const filters = [
   {
     title: "Country",
-    path: "country",
+    path: service.IPTVFilter.COUNTRY,
     icon: EarthIcon,
   },
   {
     title: "Category",
-    path: "category",
+    path: service.IPTVFilter.CATEGORY,
     icon: TagIcon,
   },
   {
     title: "Language",
-    path: "language",
+    path: service.IPTVFilter.LANGUAGE,
     icon: LanguagesIcon,
   },
 ];

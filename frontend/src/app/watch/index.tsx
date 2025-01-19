@@ -1,5 +1,6 @@
 import Spinner from "@/components/spinner";
 import VideoPlayer from "@/components/video-player";
+import { dispatchCustomEvent, ECustomEvent } from "@/lib/event";
 import React, { useEffect, useMemo, useState, useTransition } from "react";
 import { useParams } from "react-router";
 import { toast } from "sonner";
@@ -21,11 +22,33 @@ const Watch: React.FC = () => {
           toast("Something went wrong!", {
             description: res.error,
           });
-        } else {
+        } else if (res.data) {
           setChannel(res.data);
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: res.data.name,
+            artist:
+              res.data.network || res.data.owners?.join(", ") || "IPTV Desktop",
+            artwork: [
+              {
+                src: res.data.logo,
+              },
+            ],
+          });
+          navigator.mediaSession.setActionHandler("previoustrack", () =>
+            dispatchCustomEvent(ECustomEvent.prevChannel)
+          );
+          navigator.mediaSession.setActionHandler("nexttrack", () =>
+            dispatchCustomEvent(ECustomEvent.nextChannel)
+          );
         }
       });
     }
+
+    return () => {
+      navigator.mediaSession.metadata = new MediaMetadata();
+      navigator.mediaSession.setActionHandler("previoustrack", null);
+      navigator.mediaSession.setActionHandler("nexttrack", null);
+    };
   }, [channelId]);
 
   const sources = useMemo(() => {

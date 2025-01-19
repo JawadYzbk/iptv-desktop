@@ -4,23 +4,33 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInput } from "@/components/ui/sidebar";
 import { useChannelList } from "@/hooks/use-channel-list";
+import { ECustomEvent } from "@/lib/event";
 import { ArrowLeftIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate, useParams } from "react-router";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList } from "react-window";
 
 const HEIGHT = 80;
 
-const ChannelSelector: React.FC = () => {
+interface Props {
+  ref?: React.Ref<HTMLDivElement>;
+  isVisible?: boolean;
+}
+
+const ChannelSelector: React.FC<Props> = ({ ref, isVisible }) => {
   const isScrolled = useRef(false);
   const [listRef, setListRef] = useState<FixedSizeList<any> | null>(null);
   const navigate = useNavigate();
   const { filterType, code, channelId } = useParams();
-  const { isLoading, channels, search, setSearch } = useChannelList(
-    filterType,
-    code
-  );
+  const { isLoading, channels, search, setSearch, originalChannels } =
+    useChannelList(filterType, code);
   const [scrollPos, setScrollPos] = useState<"top" | "middle" | "bottom">(
     "top"
   );
@@ -46,14 +56,51 @@ const ChannelSelector: React.FC = () => {
     isScrolled.current = true;
   }, [channels, channelId, listRef]);
 
+  const handlePrev = useCallback(() => {
+    if (!channelId || originalChannels.length === 0) return;
+    const currentIdx = originalChannels.findIndex((it) => it.id === channelId);
+    if (currentIdx === -1) return;
+    let newIdx = currentIdx - 1;
+    if (newIdx < 0) {
+      newIdx = originalChannels.length - 1;
+    }
+    navigate(`/home/${filterType}/${code}/${originalChannels[newIdx].id}`);
+  }, [channelId, originalChannels, filterType, code]);
+
+  const handleNext = useCallback(() => {
+    if (!channelId || originalChannels.length === 0) return;
+    const currentIdx = originalChannels.findIndex((it) => it.id === channelId);
+    if (currentIdx === -1) return;
+    let newIdx = currentIdx + 1;
+    if (newIdx >= originalChannels.length) {
+      newIdx = 0;
+    }
+    navigate(`/home/${filterType}/${code}/${originalChannels[newIdx].id}`);
+  }, [channelId, originalChannels, filterType, code]);
+
+  useEffect(() => {
+    window.addEventListener(ECustomEvent.prevChannel, handlePrev);
+    window.addEventListener(ECustomEvent.nextChannel, handleNext);
+
+    return () => {
+      window.removeEventListener(ECustomEvent.prevChannel, handlePrev);
+      window.removeEventListener(ECustomEvent.nextChannel, handleNext);
+    };
+  }, [handleNext, handlePrev]);
+
   return (
-    <div className="absolute left-0 top-0 bottom-0 z-20 w-96 bg-gradient-to-r from-background/90 via-background/70 to-transparent pr-12 flex flex-col">
+    <div
+      ref={ref}
+      className={`absolute ${
+        isVisible ? "left-0 opacity-100" : "-left-96 opacity-0"
+      } transition-all duration-500 top-0 bottom-0 z-30 w-96 bg-gradient-to-r from-background/90 via-background/70 to-transparent pr-12 flex flex-col`}
+    >
       <header className="flex shrink-0 items-center gap-2 p-4">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => {
-            navigate(-1);
+            navigate(`/home/${filterType}/${code}`);
           }}
         >
           <ArrowLeftIcon />

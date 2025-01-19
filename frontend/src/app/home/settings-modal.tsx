@@ -31,25 +31,34 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { use, useEffect } from "react";
 import ConfigContext from "@/context/config.context";
-import { service } from "wailsjs/go/models";
-import { GetApp, Save, SetApp } from "wailsjs/go/service/ConfigStore";
 import { toast } from "sonner";
 import { DeleteAllCache } from "wailsjs/go/service/CacheStore";
+import { DefaultConfig, SetConfigs } from "wailsjs/go/service/ConfigStore";
 
 const formSchema = z.object({
   isUseAltChannelName: z.boolean(),
   isOverrideApi: z.boolean(),
-  apiUrl: z.string().url().optional(),
+  apiUrl: z.string().url(),
   cacheDuration: z.string(),
 
   isUseDOH: z.boolean(),
-  dohResolverUrl: z.string().url().optional(),
+  dohResolverUrl: z.string().url(),
 
   isAutoShowCaption: z.boolean(),
-  isEnableCEA708: z.boolean(),
 
   isUseSystemTitlebar: z.boolean(),
 });
+
+interface DBConfigStruct {
+  "iptv.isOverrideApi"?: string;
+  "iptv.apiUrl"?: string;
+  "iptv.cacheDuration"?: string;
+  "iptv.isUseAltChannelName"?: string;
+  "network.isUseDOH"?: string;
+  "network.dohResolverUrl"?: string;
+  "caption.isAutoShow"?: string;
+  "userInterface.isUseSystemTitlebar"?: string;
+}
 
 const cacheDurationOptions = [
   {
@@ -79,27 +88,10 @@ interface Props {
   onClose?: () => void;
 }
 const SettingsModal: React.FC<Props> = ({ open, onClose }) => {
-  const { app, setApp } = use(ConfigContext);
+  const { config } = use(ConfigContext);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
   });
-
-  useEffect(() => {
-    form.reset({
-      isUseAltChannelName: app?.iptv.isUseAltChannelName,
-      isOverrideApi: app?.iptv.isOverrideApi,
-      apiUrl: app?.iptv.apiUrl,
-      cacheDuration: app?.iptv.cacheDuration.toString(),
-
-      isUseDOH: app?.network.isUseDOH,
-      dohResolverUrl: app?.network.dohResolverUrl,
-
-      isAutoShowCaption: app?.caption.isAutoShow,
-      isEnableCEA708: app?.caption.isEnableCEA708,
-
-      isUseSystemTitlebar: app?.userInterface.isUseSystemTitlebar,
-    });
-  }, [app]);
 
   const isOverrideApi = useWatch({
     control: form.control,
@@ -111,33 +103,116 @@ const SettingsModal: React.FC<Props> = ({ open, onClose }) => {
     name: "isUseDOH",
   });
 
+  useEffect(() => {
+    if (config) {
+      form.reset({
+        isUseAltChannelName: config?.iptv.isUseAltChannelName,
+        isOverrideApi: config?.iptv.isOverrideApi,
+        apiUrl: config?.iptv.apiUrl,
+        cacheDuration: config?.iptv.cacheDuration.toString(),
+
+        isUseDOH: config?.network.isUseDOH,
+        dohResolverUrl: config?.network.dohResolverUrl,
+
+        isAutoShowCaption: config?.caption.isAutoShow,
+
+        isUseSystemTitlebar: config?.userInterface.isUseSystemTitlebar,
+      });
+    }
+  }, [config]);
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const dto = new service.AppConfig();
-    dto.iptv = new service.AppConfigIPTV();
-    dto.iptv.isUseAltChannelName = values.isUseAltChannelName;
-    dto.iptv.isOverrideApi = values.isOverrideApi;
-    dto.iptv.apiUrl = values.apiUrl;
-    dto.iptv.cacheDuration = parseInt(values.cacheDuration);
+    const defaultConfig = await DefaultConfig();
 
-    dto.network = new service.AppConfigNetwork();
-    dto.network.isUseDOH = values.isUseDOH;
-    dto.network.dohResolverUrl = values.dohResolverUrl;
+    const boolVal = (
+      newVal: boolean | undefined,
+      defaultVal: boolean
+    ): string | undefined => {
+      if (newVal === undefined) return undefined;
+      if (newVal == defaultVal) {
+        return undefined;
+      }
 
-    dto.caption = new service.AppConfigCaption();
-    dto.caption.isAutoShow = values.isAutoShowCaption;
-    dto.caption.isEnableCEA708 = values.isEnableCEA708;
+      return newVal ? "1" : "0";
+    };
+    const stringVal = (
+      newVal: string | undefined,
+      defaultVal: string
+    ): string | undefined => {
+      if (newVal === undefined) return undefined;
+      if (newVal == defaultVal) {
+        return undefined;
+      }
 
-    dto.userInterface = new service.AppConfigUserInterface();
-    dto.userInterface.isUseSystemTitlebar = values.isUseSystemTitlebar;
+      return newVal;
+    };
 
-    await SetApp(dto);
-    await Save();
-    const newApp = await GetApp();
-    onClose?.();
-    setApp?.(newApp);
-    toast("Action Success!", {
-      description: "Settings successfully saved!",
-    });
+    const intVal = (
+      newVal: string | undefined,
+      defaultVal: number
+    ): string | undefined => {
+      if (newVal === undefined) return undefined;
+      if (parseInt(newVal) == defaultVal) {
+        return undefined;
+      }
+
+      return newVal;
+    };
+
+    const data: DBConfigStruct = {
+      "iptv.isUseAltChannelName": boolVal(
+        values.isUseAltChannelName,
+        defaultConfig.iptv.isUseAltChannelName
+      ),
+      "iptv.isOverrideApi": boolVal(
+        values.isOverrideApi,
+        defaultConfig.iptv.isOverrideApi
+      ),
+      "iptv.apiUrl": stringVal(values.apiUrl, defaultConfig.iptv.apiUrl),
+      "iptv.cacheDuration": intVal(
+        values.cacheDuration,
+        defaultConfig.iptv.cacheDuration
+      ),
+      "network.isUseDOH": boolVal(
+        values.isUseDOH,
+        defaultConfig.network.isUseDOH
+      ),
+      "network.dohResolverUrl": stringVal(
+        values.dohResolverUrl,
+        defaultConfig.network.dohResolverUrl
+      ),
+      "caption.isAutoShow": boolVal(
+        values.isAutoShowCaption,
+        defaultConfig.caption.isAutoShow
+      ),
+      "userInterface.isUseSystemTitlebar": boolVal(
+        values.isUseSystemTitlebar,
+        defaultConfig.userInterface.isUseSystemTitlebar
+      ),
+    };
+    if (!values.isOverrideApi) {
+      delete data["iptv.isOverrideApi"];
+    }
+    if (!values.isUseDOH) {
+      delete data["network.dohResolverUrl"];
+    }
+
+    for (const key in data) {
+      if (data[key as keyof DBConfigStruct] === undefined) {
+        delete data[key as keyof DBConfigStruct];
+      }
+    }
+    const err = await SetConfigs(data as { [key: string]: string });
+    if (err) {
+      toast("Action Failed!", {
+        description: err,
+      });
+    } else {
+      onClose?.();
+      toast("Action Success!", {
+        description: "New settings will applied after restart!",
+      });
+    }
   };
 
   const doDeleteCache = async () => {
@@ -226,7 +301,7 @@ const SettingsModal: React.FC<Props> = ({ open, onClose }) => {
                       <FormItem>
                         <FormLabel>IPTV API Base URL</FormLabel>
                         <FormControl>
-                          <Input disabled={!isOverrideApi} {...field} />
+                          <Input {...field} disabled={!isOverrideApi} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -305,7 +380,7 @@ const SettingsModal: React.FC<Props> = ({ open, onClose }) => {
                       <FormItem>
                         <FormLabel>DOH Resolver URL</FormLabel>
                         <FormControl>
-                          <Input disabled={!isUseDOH} {...field} />
+                          <Input {...field} disabled={!isUseDOH} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -326,29 +401,6 @@ const SettingsModal: React.FC<Props> = ({ open, onClose }) => {
                           </FormLabel>
                           <FormDescription>
                             Automatically select and show available caption.
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="isEnableCEA708"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">
-                            Enable CEA 708
-                          </FormLabel>
-                          <FormDescription>
-                            Enable and show CEA 708 caption.
                           </FormDescription>
                         </div>
                         <FormControl>

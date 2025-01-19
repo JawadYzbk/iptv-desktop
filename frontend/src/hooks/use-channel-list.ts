@@ -1,4 +1,4 @@
-import ConfigContext from "@/context/config.context";
+import ConfigContext, { IPTVView } from "@/context/config.context";
 import { useContext, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
@@ -6,33 +6,14 @@ import { service } from "wailsjs/go/models";
 import { GetFilteredChannels } from "wailsjs/go/service/IPTV";
 
 export const useChannelList = (filterType?: string, code?: string) => {
-  const { app } = useContext(ConfigContext);
+  const { config } = useContext(ConfigContext);
   const [isLoading, startLoading] = useTransition();
   const [channels, setChannels] = useState<service.Channel[]>([]);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!filterType || !code) return;
-    var filter: service.IPTVFilter;
-    switch (filterType) {
-      case "country":
-        filter = service.IPTVFilter.COUNTRY;
-        break;
-
-      case "category":
-        filter = service.IPTVFilter.CATEGORY;
-        break;
-
-      case "language":
-        filter = service.IPTVFilter.LANGUAGE;
-        break;
-
-      default:
-        return;
-    }
-    const view = new service.IPTVViewConfig();
-    view.filter = filterType;
-    view.code = code;
+    var filter = filterType as service.IPTVFilter;
 
     startLoading(async () => {
       const res = await GetFilteredChannels(filter, code);
@@ -55,7 +36,7 @@ export const useChannelList = (filterType?: string, code?: string) => {
     const loweredQuery = debouncedSearch.toLocaleLowerCase();
 
     return channels.filter((item) => {
-      const chName = app?.iptv.isUseAltChannelName
+      const chName = config?.iptv.isUseAltChannelName
         ? item.alt_names?.[0] ?? item.name
         : item.name;
       const loweredItem = chName.toLocaleLowerCase();
@@ -67,6 +48,7 @@ export const useChannelList = (filterType?: string, code?: string) => {
   return {
     isLoading,
     channels: filteredList,
+    originalChannels: channels,
     search,
     setSearch,
   };

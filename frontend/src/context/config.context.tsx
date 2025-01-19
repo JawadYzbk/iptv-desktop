@@ -1,13 +1,20 @@
-import React, { createContext } from "react";
+import { createContext } from "react";
 import { service } from "wailsjs/go/models";
 
-interface IConfigContext {
-  app?: service.AppConfig;
-  setApp?: React.Dispatch<React.SetStateAction<service.AppConfig | undefined>>;
-  IPTVView?: service.IPTVViewConfig;
-  setIPTVView?: React.Dispatch<
-    React.SetStateAction<service.IPTVViewConfig | undefined>
-  >;
+export interface IPTVView {
+  filterType: service.IPTVFilter;
+  code?: string;
 }
-const ConfigContext = createContext<IConfigContext>({});
+
+interface IConfigContext {
+  config?: service.Config;
+  iptvView: IPTVView;
+  doSetIptvView: (iptvView: IPTVView) => void;
+}
+const ConfigContext = createContext<IConfigContext>({
+  iptvView: {
+    filterType: service.IPTVFilter.COUNTRY,
+  },
+  doSetIptvView: () => {},
+});
 export default ConfigContext;

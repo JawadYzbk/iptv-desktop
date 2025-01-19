@@ -20,12 +20,12 @@ type Proxy struct {
 
 func NewProxy(ctx *context.Context, cs *ConfigStore) (*Proxy, error) {
 	var client *http.Client
-	config := cs.GetApp().Network
+	config := cs.config.Network
 	if !config.IsUseDOH {
 		client = &http.Client{}
 	} else {
 		dohUrl := config.DOHResolverUrl
-		dohResolver, err := dns.NewDoHResolver(*dohUrl, dns.DoHCache())
+		dohResolver, err := dns.NewDoHResolver(dohUrl, dns.DoHCache())
 		if err != nil {
 			return nil, err
 		}

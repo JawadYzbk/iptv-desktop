@@ -1,150 +1,139 @@
 package service
 
-import (
-	"encoding/gob"
-	"fmt"
-	"log"
-	"os"
-	"path/filepath"
-
-	"github.com/adrg/xdg"
-)
-
-type IPTVViewConfig struct {
-	Filter string  `json:"filter"`
-	Code   *string `json:"code"`
-}
+import "strconv"
 
 type AppConfigIPTV struct {
-	IsOverrideApi       bool    `json:"isOverrideApi"`
-	ApiUrl              *string `json:"apiUrl"`
-	CacheDuration       int     `json:"cacheDuration"`
-	IsUseAltChannelName bool    `json:"isUseAltChannelName"`
+	IsOverrideApi       bool   `json:"isOverrideApi"`
+	ApiUrl              string `json:"apiUrl"`
+	CacheDuration       int    `json:"cacheDuration"`
+	IsUseAltChannelName bool   `json:"isUseAltChannelName"`
 }
 
 type AppConfigNetwork struct {
-	IsUseDOH       bool    `json:"isUseDOH"`
-	DOHResolverUrl *string `json:"dohResolverUrl"`
+	IsUseDOH       bool   `json:"isUseDOH"`
+	DOHResolverUrl string `json:"dohResolverUrl"`
 }
 
 type AppConfigCaption struct {
-	IsAutoShow     bool `json:"isAutoShow"`
-	IsEnableCEA708 bool `json:"isEnableCEA708"`
+	IsAutoShow bool `json:"isAutoShow"`
 }
 
 type AppConfigUserInterface struct {
 	IsUseSystemTitlebar bool `json:"isUseSystemTitlebar"`
 }
 
-type AppConfig struct {
+type Config struct {
 	IPTV          AppConfigIPTV          `json:"iptv"`
 	Network       AppConfigNetwork       `json:"network"`
 	Caption       AppConfigCaption       `json:"caption"`
 	UserInterface AppConfigUserInterface `json:"userInterface"`
 }
 
-type Config struct {
-	Version  int            `json:"version"`
-	IPTVView IPTVViewConfig `json:"iptvView"`
-	App      AppConfig      `json:"app"`
-}
-
-func DefaultValues() Config {
-	apiUrl := "https://iptv-org.github.io/api"
-	dohResolverUrl := "https://chrome.cloudflare-dns.com/dns-query"
-	return Config{
-		Version: 1,
-		IPTVView: IPTVViewConfig{
-			Filter: "country",
-		},
-		App: AppConfig{
-			IPTV: AppConfigIPTV{
-				IsOverrideApi:       false,
-				ApiUrl:              &apiUrl,
-				CacheDuration:       60 * 60 * 24,
-				IsUseAltChannelName: true,
-			},
-			Network: AppConfigNetwork{
-				IsUseDOH:       false,
-				DOHResolverUrl: &dohResolverUrl,
-			},
-			Caption: AppConfigCaption{
-				IsAutoShow:     false,
-				IsEnableCEA708: false,
-			},
-			UserInterface: AppConfigUserInterface{
-				IsUseSystemTitlebar: true,
-			},
-		},
-	}
-}
-
 type ConfigStore struct {
-	configPath string
-	config     *Config
+	db     *DB
+	config *Config
 }
 
-func NewConfigStore() (*ConfigStore, error) {
-	configFilePath, err := xdg.ConfigFile("iptv-desktop/config.gob")
+func NewConfigStore(db *DB) (*ConfigStore, error) {
+	newConfigStore := &ConfigStore{
+		db: db,
+	}
+	defaultCfg := newConfigStore.DefaultConfig()
+	newConfigStore.config = &defaultCfg
+
+	err := newConfigStore.loadDB()
 	if err != nil {
-		return nil, fmt.Errorf("could not resolve path for config file: %w", err)
+		return nil, err
 	}
 
-	var config Config = DefaultValues()
+	return newConfigStore, nil
+}
 
-	dir, _ := filepath.Split(configFilePath)
-	_, err = os.Stat(dir)
-	if os.IsNotExist(err) {
-		os.MkdirAll(dir, 0755)
+func (cs *ConfigStore) DefaultConfig() Config {
+	return Config{
+		IPTV: AppConfigIPTV{
+			IsOverrideApi:       false,
+			ApiUrl:              "https://iptv-org.github.io/api",
+			CacheDuration:       60 * 60 * 24,
+			IsUseAltChannelName: true,
+		},
+		Network: AppConfigNetwork{
+			IsUseDOH:       false,
+			DOHResolverUrl: "https://chrome.cloudflare-dns.com/dns-query",
+		},
+		Caption: AppConfigCaption{
+			IsAutoShow: false,
+		},
+		UserInterface: AppConfigUserInterface{
+			IsUseSystemTitlebar: true,
+		},
+	}
+}
+
+func (c *ConfigStore) loadDB() error {
+	dbConfig, err := c.db.GetAllConfig()
+	if err != nil {
+		return err
 	}
 
-	buf, err := os.Open(configFilePath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			log.Fatalln("could not read the configuration file: %w", err)
+	for _, config := range *dbConfig {
+		switch config.Key {
+		case "iptv.isOverrideApi":
+			c.config.IPTV.IsOverrideApi = config.Value == "1"
+		case "iptv.apiUrl":
+			c.config.IPTV.ApiUrl = config.Value
+		case "iptv.cacheDuration":
+			intVal, err := strconv.Atoi(config.Value)
+			if err == nil {
+				c.config.IPTV.CacheDuration = intVal
+			}
+		case "iptv.isUseAltChannelName":
+			c.config.IPTV.IsUseAltChannelName = config.Value == "1"
+		case "network.isUseDOH":
+			c.config.Network.IsUseDOH = config.Value == "1"
+		case "network.dohResolverUrl":
+			c.config.Network.DOHResolverUrl = config.Value
+		case "caption.isAutoShow":
+			c.config.Caption.IsAutoShow = config.Value == "1"
+		case "userInterface.isUseSystemTitlebar":
+			c.config.UserInterface.IsUseSystemTitlebar = config.Value == "1"
+
+		default:
+			c.db.DeleteConfig(config.Key)
 		}
-	} else {
-		decoder := gob.NewDecoder(buf)
-		_ = decoder.Decode(&config)
 	}
-	defer buf.Close()
 
-	return &ConfigStore{
-		configPath: configFilePath,
-		config:     &config,
-	}, nil
+	return nil
 }
 
-func (s *ConfigStore) GetIPTVView() IPTVViewConfig {
-	return s.config.IPTVView
-}
-
-func (s *ConfigStore) GetApp() AppConfig {
-	return s.config.App
-}
-
-func (s *ConfigStore) SetIPTVView(view IPTVViewConfig) {
-	s.config.IPTVView = view
-}
-
-func (s *ConfigStore) SetApp(app AppConfig) {
-	s.config.App = app
-}
-
-func (s *ConfigStore) Save() {
-	f, err := os.Create(s.configPath)
+func (c *ConfigStore) RefreshConfig() *string {
+	err := c.loadDB()
 	if err != nil {
-		log.Fatalln("failed create config")
-	}
-	defer f.Close()
-	clonedConfig := *s.config
-	if !clonedConfig.App.IPTV.IsOverrideApi {
-		clonedConfig.App.IPTV.ApiUrl = nil
-	}
-	if !clonedConfig.App.Network.IsUseDOH {
-		clonedConfig.App.Network.DOHResolverUrl = nil
+		errStr := err.Error()
+		return &errStr
 	}
 
-	encoder := gob.NewEncoder(f)
-	_ = encoder.Encode(clonedConfig)
+	return nil
+}
+
+func (c *ConfigStore) SetConfigs(configs map[string]string) *string {
+	var dbConfigs []dbConfig
+	for key, value := range configs {
+		dbConfigs = append(dbConfigs, dbConfig{
+			Key:   key,
+			Value: value,
+		})
+	}
+
+	err := c.db.SetMultipleConfig(dbConfigs)
+	if err != nil {
+		errStr := err.Error()
+		return &errStr
+	}
+
+	return nil
+}
+
+func (c *ConfigStore) GetConfig() Config {
+	return *c.config
 }

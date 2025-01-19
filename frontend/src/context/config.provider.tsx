@@ -1,32 +1,43 @@
 import React, { useEffect, useState } from "react";
 import { service } from "wailsjs/go/models";
-import ConfigContext from "./config.context";
+import ConfigContext, { IPTVView } from "./config.context";
 import Icon from "@/assets/images/icon.png";
-import { GetApp, GetIPTVView } from "wailsjs/go/service/ConfigStore";
+import { GetConfig } from "wailsjs/go/service/ConfigStore";
 
 interface Props {
   children?: React.ReactNode;
 }
 
+const IPTV_VIEW_KEY = "IPTV_VIEW";
 const ConfigProvider: React.FC<Props> = ({ children }) => {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [app, setApp] = useState<service.AppConfig>();
-  const [IPTVView, setIPTVView] = useState<service.IPTVViewConfig>();
+  const [config, setConfig] = useState<service.Config>();
+  const [iptvView, setIptvView] = useState<IPTVView>({
+    filterType: service.IPTVFilter.COUNTRY,
+  });
 
   useEffect(() => {
     (async () => {
-      const [resApp, resIPTVView] = await Promise.all([
-        GetApp(),
-        GetIPTVView(),
-      ]);
-      setApp(resApp);
-      setIPTVView(resIPTVView);
+      const resConfig = await GetConfig();
+      setConfig(resConfig);
+      const saved = localStorage.getItem(IPTV_VIEW_KEY);
+      if (saved) {
+        try {
+          const decoded = JSON.parse(saved);
+          setIptvView(decoded);
+        } catch (error) {}
+      }
       setIsLoaded(true);
     })();
   }, []);
 
+  const doSetIptvView = (iptvView: IPTVView) => {
+    localStorage.setItem(IPTV_VIEW_KEY, JSON.stringify(iptvView));
+    setIptvView(iptvView);
+  };
+
   return isLoaded ? (
-    <ConfigContext.Provider value={{ app, setApp, IPTVView, setIPTVView }}>
+    <ConfigContext.Provider value={{ config, iptvView, doSetIptvView }}>
       {children}
     </ConfigContext.Provider>
   ) : (

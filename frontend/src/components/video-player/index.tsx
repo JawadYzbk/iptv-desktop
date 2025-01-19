@@ -27,15 +27,17 @@ export const VideoPlayer: React.FC<Props> = ({ sources }) => {
           controls: false,
           fill: true,
           sources,
+          html5: {
+            nativeTextTracks: false,
+          },
         },
         () => {
-          videojs.log("player is ready");
+          setPlayer(newPlayer);
         }
       );
       newPlayer.addClass("vjs-iptv");
-      setPlayer(newPlayer);
     } else {
-      player.autoplay("play");
+      player.autoplay(true);
       player.src(sources);
     }
   }, [sources, videoRef]);
@@ -50,14 +52,14 @@ export const VideoPlayer: React.FC<Props> = ({ sources }) => {
   }, [player]);
 
   return (
-    <React.Fragment>
+    <div className="relative w-full h-full overflow-hidden">
       <div data-vjs-player className="absolute inset-0">
         <div ref={videoRef} className="absolute inset-0" />
       </div>
       <VideoPlayerProvider player={player}>
         <VideoPlayerControls />
       </VideoPlayerProvider>
-    </React.Fragment>
+    </div>
   );
 };
 
