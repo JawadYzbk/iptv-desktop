@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/adrg/xdg"
 	_ "modernc.org/sqlite"
@@ -125,8 +126,19 @@ func (d *DB) GetAllConfig() (*[]dbConfig, error) {
 	return &results, nil
 }
 
-func (d *DB) DeleteConfig(key string) error {
-	_, err := d.db.Exec("DELETE FROM `configs` WHERE `key` = ?", key)
+func (d *DB) DeleteConfigs(keys []any) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	bindMarks := make([]string, len(keys))
+	for i := range keys {
+		bindMarks[i] = "?"
+	}
+
+	questions := strings.Join(bindMarks, ", ")
+
+	_, err := d.db.Exec("DELETE FROM `configs` WHERE `key` IN ("+questions+")", keys...)
 	return err
 }
 

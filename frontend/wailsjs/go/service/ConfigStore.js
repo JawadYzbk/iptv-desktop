@@ -6,6 +6,10 @@ export function DefaultConfig() {
   return window['go']['service']['ConfigStore']['DefaultConfig']();
 }
 
+export function DeleteConfigs(arg1) {
+  return window['go']['service']['ConfigStore']['DeleteConfigs'](arg1);
+}
+
 export function GetConfig() {
   return window['go']['service']['ConfigStore']['GetConfig']();
 }

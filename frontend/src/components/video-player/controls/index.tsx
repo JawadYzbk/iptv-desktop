@@ -73,13 +73,13 @@ const VideoPlayerControls: React.FC = () => {
         ref={bottomControlRef}
         className={`absolute ${
           isVisible ? "bottom-0 opacity-100" : "-bottom-40 opacity-0"
-        } transition-all duration-500 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent px-20 py-20 grid grid-cols-[400px_minmax(0,100fr)_400px] z-10`}
+        } transition-all duration-500 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent px-20 py-20 grid grid-cols-[400px_minmax(0,100fr)_400px] z-10 draggable`}
       >
         <div></div>
         <div className="flex items-center justify-center gap-4">
           <Button
             variant="outline"
-            className="size-14 rounded-full p-0"
+            className="size-14 rounded-full p-0 not-draggable"
             onClick={() => dispatchCustomEvent(ECustomEvent.prevChannel)}
           >
             <ChevronsLeftIcon className="!size-6" />
@@ -87,17 +87,29 @@ const VideoPlayerControls: React.FC = () => {
           <PlayPauseButton />
           <Button
             variant="outline"
-            className="size-14 rounded-full p-0"
+            className="size-14 rounded-full p-0 not-draggable"
             onClick={() => dispatchCustomEvent(ECustomEvent.nextChannel)}
           >
             <ChevronsRightIcon className="!size-6" />
           </Button>
         </div>
-        <div className="flex justify-end items-center gap-2">
+        <div className="flex justify-end items-center gap-2 ">
           <VolumeControl />
-          <CaptionButton variant="outline" size="icon" className="size-10" />
-          <PIPButton variant="outline" size="icon" className="size-10" />
-          <FullScreenButton variant="outline" size="icon" className="size-10" />
+          <CaptionButton
+            variant="outline"
+            size="icon"
+            className="size-10 not-draggable"
+          />
+          <PIPButton
+            variant="outline"
+            size="icon"
+            className="size-10 not-draggable"
+          />
+          <FullScreenButton
+            variant="outline"
+            size="icon"
+            className="size-10 not-draggable"
+          />
         </div>
       </div>
     </React.Fragment>

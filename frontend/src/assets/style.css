@@ -78,6 +78,20 @@
   .dark {
     color-scheme: dark;
   }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-card;
+    border-radius: 5px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary;
+  }
 }
 @layer base {
   * {
@@ -86,8 +100,13 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  a,
+  img {
+    -webkit-user-drag: none;
+  }
 }
-@layer utilities {
+@layer components {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
@@ -139,6 +158,14 @@
       black calc(100% - 60px),
       black
     );
+  }
+
+  .draggable {
+    --wails-draggable: drag;
+    user-select: none;
+  }
+  .not-draggable {
+    --wails-draggable: no-drag;
   }
 }
 .vjs-error-display .vjs-modal-dialog-content {

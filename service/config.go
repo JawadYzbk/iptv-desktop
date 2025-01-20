@@ -65,7 +65,7 @@ func (cs *ConfigStore) DefaultConfig() Config {
 			IsAutoShow: false,
 		},
 		UserInterface: AppConfigUserInterface{
-			IsUseSystemTitlebar: true,
+			IsUseSystemTitlebar: false,
 		},
 	}
 }
@@ -75,6 +75,8 @@ func (c *ConfigStore) loadDB() error {
 	if err != nil {
 		return err
 	}
+
+	var deletedKeys []any
 
 	for _, config := range *dbConfig {
 		switch config.Key {
@@ -99,8 +101,12 @@ func (c *ConfigStore) loadDB() error {
 			c.config.UserInterface.IsUseSystemTitlebar = config.Value == "1"
 
 		default:
-			c.db.DeleteConfig(config.Key)
+			deletedKeys = append(deletedKeys, config.Key)
 		}
+	}
+
+	if len(deletedKeys) > 0 {
+		c.db.DeleteConfigs(deletedKeys)
 	}
 
 	return nil
@@ -126,6 +132,16 @@ func (c *ConfigStore) SetConfigs(configs map[string]string) *string {
 	}
 
 	err := c.db.SetMultipleConfig(dbConfigs)
+	if err != nil {
+		errStr := err.Error()
+		return &errStr
+	}
+
+	return nil
+}
+
+func (c *ConfigStore) DeleteConfigs(keys []any) *string {
+	err := c.db.DeleteConfigs(keys)
 	if err != nil {
 		errStr := err.Error()
 		return &errStr

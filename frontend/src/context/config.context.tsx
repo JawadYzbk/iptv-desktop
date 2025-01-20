@@ -10,11 +10,17 @@ interface IConfigContext {
   config?: service.Config;
   iptvView: IPTVView;
   doSetIptvView: (iptvView: IPTVView) => void;
+  isFullScreen: boolean;
+  enterFullScreen: () => void;
+  exitFullScreen: () => void;
 }
 const ConfigContext = createContext<IConfigContext>({
   iptvView: {
     filterType: service.IPTVFilter.COUNTRY,
   },
   doSetIptvView: () => {},
+  isFullScreen: false,
+  enterFullScreen: () => {},
+  exitFullScreen: () => {},
 });
 export default ConfigContext;

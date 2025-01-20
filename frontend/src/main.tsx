@@ -13,7 +13,7 @@ root.render(
   <React.Fragment>
     <ConfigProvider>
       <Router />
+      <Toaster position="top-center" />
     </ConfigProvider>
-    <Toaster position="top-center" />
   </React.Fragment>
 );

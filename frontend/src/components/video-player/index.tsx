@@ -35,7 +35,7 @@ export const VideoPlayer: React.FC<Props> = ({ sources }) => {
           setPlayer(newPlayer);
         }
       );
-      newPlayer.addClass("vjs-iptv");
+      newPlayer.addClass("vjs-iptv", "draggable");
     } else {
       player.autoplay(true);
       player.src(sources);

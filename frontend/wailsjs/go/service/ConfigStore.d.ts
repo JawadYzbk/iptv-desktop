@@ -4,6 +4,8 @@ import {service} from '../models';
 
 export function DefaultConfig():Promise<service.Config>;
 
+export function DeleteConfigs(arg1:Array<any>):Promise<any>;
+
 export function GetConfig():Promise<service.Config>;
 
 export function RefreshConfig():Promise<any>;

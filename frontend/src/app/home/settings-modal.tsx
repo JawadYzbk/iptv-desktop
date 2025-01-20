@@ -33,7 +33,12 @@ import { use, useEffect } from "react";
 import ConfigContext from "@/context/config.context";
 import { toast } from "sonner";
 import { DeleteAllCache } from "wailsjs/go/service/CacheStore";
-import { DefaultConfig, SetConfigs } from "wailsjs/go/service/ConfigStore";
+import {
+  DefaultConfig,
+  DeleteConfigs,
+  SetConfigs,
+} from "wailsjs/go/service/ConfigStore";
+import { n } from "react-router/dist/development/fog-of-war-Ckdfl79L";
 
 const formSchema = z.object({
   isUseAltChannelName: z.boolean(),
@@ -190,18 +195,30 @@ const SettingsModal: React.FC<Props> = ({ open, onClose }) => {
         defaultConfig.userInterface.isUseSystemTitlebar
       ),
     };
+    let needDelete: string[] = [];
     if (!values.isOverrideApi) {
       delete data["iptv.isOverrideApi"];
+      needDelete.push("iptv.isOverrideApi");
     }
     if (!values.isUseDOH) {
       delete data["network.dohResolverUrl"];
+      needDelete.push("network.dohResolverUrl");
     }
 
     for (const key in data) {
       if (data[key as keyof DBConfigStruct] === undefined) {
         delete data[key as keyof DBConfigStruct];
+        needDelete.push(key);
       }
     }
+    const errDelete = await DeleteConfigs(needDelete);
+    if (errDelete) {
+      toast("Action Failed!", {
+        description: errDelete,
+      });
+      return;
+    }
+
     const err = await SetConfigs(data as { [key: string]: string });
     if (err) {
       toast("Action Failed!", {

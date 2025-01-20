@@ -25,3 +25,27 @@ func (a *App) startup(ctx context.Context) {
 func (a *App) onDomReady(ctx context.Context) {
 	runtime.WindowShow(a.ctx)
 }
+
+func (a *App) EnterFullScreen() {
+	runtime.WindowFullscreen(a.ctx)
+}
+
+func (a *App) IsFullScreen() bool {
+	return runtime.WindowIsFullscreen(a.ctx)
+}
+
+func (a *App) ExitFullScreen() {
+	runtime.WindowUnfullscreen(a.ctx)
+}
+
+func (a *App) ToggleMaximize() {
+	runtime.WindowToggleMaximise(a.ctx)
+}
+
+func (a *App) Minimize() {
+	runtime.WindowMinimise(a.ctx)
+}
+
+func (a *App) Quit() {
+	runtime.Quit(a.ctx)
+}

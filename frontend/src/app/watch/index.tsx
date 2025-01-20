@@ -1,4 +1,5 @@
 import Spinner from "@/components/spinner";
+import TitlebarButtons from "@/components/titlebar-buttons";
 import VideoPlayer from "@/components/video-player";
 import { dispatchCustomEvent, ECustomEvent } from "@/lib/event";
 import React, { useEffect, useMemo, useState, useTransition } from "react";
@@ -67,6 +68,9 @@ const Watch: React.FC = () => {
         </div>
       )}
       <VideoPlayer sources={sources} />
+      <div className="fixed top-0 right-0 z-30">
+        <TitlebarButtons />
+      </div>
     </div>
   );
 };

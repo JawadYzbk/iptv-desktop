@@ -3,7 +3,7 @@ import { Button, ButtonProps } from "./ui/button";
 import { useFullScreen } from "@/hooks/use-fullscreen";
 
 const FullScreenButton: React.FC<ButtonProps> = ({ ...props }) => {
-  const { isFullScreen, openFullScreen, exitFullScreen } = useFullScreen();
+  const { isFullScreen, enterFullScreen, exitFullScreen } = useFullScreen();
 
   return (
     <Button
@@ -12,7 +12,7 @@ const FullScreenButton: React.FC<ButtonProps> = ({ ...props }) => {
         if (isFullScreen) {
           exitFullScreen();
         } else {
-          openFullScreen();
+          enterFullScreen();
         }
       }}
     >

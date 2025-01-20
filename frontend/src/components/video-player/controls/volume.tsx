@@ -9,7 +9,7 @@ const VolumeControl: React.FC = () => {
     use(VideoPlayerContext);
 
   return (
-    <div className="bg-background border border-input flex rounded-md">
+    <div className="bg-background border border-input flex rounded-md not-draggable">
       <Button
         variant="ghost"
         size="icon"

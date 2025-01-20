@@ -3,6 +3,11 @@ import { service } from "wailsjs/go/models";
 import ConfigContext, { IPTVView } from "./config.context";
 import Icon from "@/assets/images/icon.png";
 import { GetConfig } from "wailsjs/go/service/ConfigStore";
+import {
+  EnterFullScreen,
+  ExitFullScreen,
+  IsFullScreen,
+} from "wailsjs/go/main/App";
 
 interface Props {
   children?: React.ReactNode;
@@ -10,6 +15,7 @@ interface Props {
 
 const IPTV_VIEW_KEY = "IPTV_VIEW";
 const ConfigProvider: React.FC<Props> = ({ children }) => {
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [config, setConfig] = useState<service.Config>();
   const [iptvView, setIptvView] = useState<IPTVView>({
@@ -18,6 +24,8 @@ const ConfigProvider: React.FC<Props> = ({ children }) => {
 
   useEffect(() => {
     (async () => {
+      const resIsFullScreen = await IsFullScreen();
+      setIsFullScreen(resIsFullScreen);
       const resConfig = await GetConfig();
       setConfig(resConfig);
       const saved = localStorage.getItem(IPTV_VIEW_KEY);
@@ -36,8 +44,27 @@ const ConfigProvider: React.FC<Props> = ({ children }) => {
     setIptvView(iptvView);
   };
 
+  const enterFullScreen = async () => {
+    await EnterFullScreen();
+    setIsFullScreen(await IsFullScreen());
+  };
+
+  const exitFullScreen = async () => {
+    await ExitFullScreen();
+    setIsFullScreen(await IsFullScreen());
+  };
+
   return isLoaded ? (
-    <ConfigContext.Provider value={{ config, iptvView, doSetIptvView }}>
+    <ConfigContext.Provider
+      value={{
+        config,
+        iptvView,
+        doSetIptvView,
+        isFullScreen,
+        enterFullScreen,
+        exitFullScreen,
+      }}
+    >
       {children}
     </ConfigContext.Provider>
   ) : (

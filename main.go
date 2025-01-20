@@ -9,6 +9,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
@@ -40,6 +41,8 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	isCustomTitlebar := !configStore.GetConfig().UserInterface.IsUseSystemTitlebar
+
 	err = wails.Run(&options.App{
 		Title:            "IPTV Desktop",
 		Width:            1280,
@@ -51,6 +54,7 @@ func main() {
 			Middleware: proxy.Middleware,
 		},
 		BackgroundColour: &options.RGBA{R: 9, G: 9, B: 16, A: 1},
+		Frameless:        isCustomTitlebar,
 		OnStartup:        app.startup,
 		OnDomReady:       app.onDomReady,
 		Bind: []interface{}{
@@ -69,6 +73,9 @@ func main() {
 		DragAndDrop: &options.DragAndDrop{
 			EnableFileDrop:     false,
 			DisableWebViewDrop: true,
+		},
+		Windows: &windows.Options{
+			Theme: windows.Dark,
 		},
 		Linux: &linux.Options{
 			WebviewGpuPolicy: linux.WebviewGpuPolicyAlways,

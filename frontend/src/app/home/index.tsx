@@ -8,7 +8,7 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList } from "react-window";
 import { useChannelList } from "@/hooks/use-channel-list";
 import ConfigContext, { IPTVView } from "@/context/config.context";
-import { InfoIcon, MilestoneIcon } from "lucide-react";
+import { MilestoneIcon } from "lucide-react";
 
 const gridConfig: GridConfig = {
   default: 2,
