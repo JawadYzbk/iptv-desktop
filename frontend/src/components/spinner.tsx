@@ -1,8 +1,15 @@
 import React from "react";
 
-const Spinner: React.FC = () => {
+interface Props {
+  isAbsolute?: boolean;
+}
+const Spinner: React.FC<Props> = ({ isAbsolute }) => {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 py-4">
+    <div
+      className={`flex flex-col items-center justify-center gap-4 py-4 ${
+        isAbsolute ? "absolute inset-0 bg-background/60" : ""
+      }`}
+    >
       <div
         className="w-12 h-12 rounded-full border-t-4 border-primary border-r-4 border-r-transparent animate-spin 
                    after:content-[''] after:w-12 after:h-12 after:rounded-full after:border-b-4 after:border-secondary 

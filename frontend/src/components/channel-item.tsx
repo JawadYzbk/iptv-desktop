@@ -4,6 +4,9 @@ import Placeholder from "@/assets/images/logo-placeholder.png";
 import { Link } from "react-router";
 import { imageProxy } from "@/lib/proxy";
 import ConfigContext from "@/context/config.context";
+import { Button } from "./ui/button";
+import { BookmarkPlusIcon, ListPlusIcon } from "lucide-react";
+import PlaylistContext from "@/context/playlist.context";
 
 interface Props {
   to: string;
@@ -17,12 +20,12 @@ const ChannelItem: React.FC<Props> = ({
   isVertical,
   isActive,
 }) => {
+  const { setShowSavePlaylist } = use(PlaylistContext);
   const { config } = use(ConfigContext);
   const [src, setSrc] = useState(imageProxy(channel.logo));
 
   return (
-    <Link
-      to={to}
+    <div
       className={`${
         isActive
           ? "bg-primary text-primary-foreground"
@@ -30,8 +33,8 @@ const ChannelItem: React.FC<Props> = ({
           ? "bg-transparent"
           : "border bg-card"
       } flex ${
-        isVertical ? "flex-row items-center gap-4 p-2" : "flex-col gap-2 p-4"
-      } hover:bg-primary hover:text-primary-foreground rounded-lg focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none`}
+        isVertical ? "flex-row items-center gap-4 p-2" : "flex-col gap-3 p-4"
+      } hover:bg-primary hover:text-primary-foreground rounded-lg relative`}
     >
       <div
         className={`${
@@ -50,14 +53,28 @@ const ChannelItem: React.FC<Props> = ({
       </div>
       <h3
         className={`font-bold ${
-          isVertical ? "line-clamp-2" : "truncate text-center"
-        } min-w-0`}
+          isVertical ? "line-clamp-2" : "truncate"
+        } min-w-0 flex-1`}
       >
         {config?.iptv.isUseAltChannelName
           ? channel.alt_names?.[0] ?? channel.name
           : channel.name}
       </h3>
-    </Link>
+      <Link
+        to={to}
+        className="absolute inset-0  rounded-lg focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
+      ></Link>
+      <Button
+        size="icon"
+        variant="ghost"
+        className={`absolute right-1 ${
+          isVertical ? "bottom-1/2 translate-y-1/2" : "bottom-2"
+        } hover:bg-transparent hover:text-inherit transition-none`}
+        onClick={() => setShowSavePlaylist(channel)}
+      >
+        <BookmarkPlusIcon />
+      </Button>
+    </div>
   );
 };
 export default ChannelItem;

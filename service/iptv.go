@@ -7,24 +7,27 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"strconv"
 )
 
 type IPTV struct {
-	ctx     *context.Context
-	BaseURL string      `json:"baseURL"`
-	Cache   *CacheStore `json:"cacheStore"`
+	ctx    *context.Context
+	config *ConfigStore
+	cache  *CacheStore
+	db     *DB
 }
 
-func NewIPTV(baseURL string, cache *CacheStore, ctx *context.Context) (*IPTV, error) {
+func NewIPTV(config *ConfigStore, cache *CacheStore, db *DB, ctx *context.Context) (*IPTV, error) {
 	return &IPTV{
-		ctx:     ctx,
-		BaseURL: baseURL,
-		Cache:   cache,
+		ctx:    ctx,
+		config: config,
+		cache:  cache,
+		db:     db,
 	}, nil
 }
 
 func (iptv *IPTV) get(path string, result any) error {
-	url := iptv.BaseURL + "/" + path
+	url := iptv.config.config.IPTV.ApiUrl + "/" + path
 
 	client := http.Client{
 		Timeout: 0,
@@ -72,7 +75,7 @@ type CountriesResult struct {
 
 func (iptv *IPTV) GetAllCountry() CountriesResult {
 	var result []Country
-	err := iptv.Cache.GetOrSetCache(COUNTRIES, &result, func() error {
+	err := iptv.cache.GetOrSetCache(COUNTRIES, &result, func() error {
 		return iptv.get("countries.json", &result)
 	})
 	if err != nil {
@@ -98,7 +101,7 @@ type CategoriesResult struct {
 
 func (iptv *IPTV) GetAllCategory() CategoriesResult {
 	var result []Category
-	err := iptv.Cache.GetOrSetCache(CATEGORIES, &result, func() error {
+	err := iptv.cache.GetOrSetCache(CATEGORIES, &result, func() error {
 		return iptv.get("categories.json", &result)
 	})
 	if err != nil {
@@ -124,7 +127,7 @@ type LanguagesResult struct {
 
 func (iptv *IPTV) GetAllLanguage() LanguagesResult {
 	var result []Language
-	err := iptv.Cache.GetOrSetCache(LANGUAGES, &result, func() error {
+	err := iptv.cache.GetOrSetCache(LANGUAGES, &result, func() error {
 		return iptv.get("languages.json", &result)
 	})
 	if err != nil {
@@ -165,7 +168,7 @@ type ChannelsResult struct {
 
 func (iptv *IPTV) getAllChannel() ChannelsResult {
 	var result []Channel
-	err := iptv.Cache.GetOrSetCache(CHANNELS, &result, func() error {
+	err := iptv.cache.GetOrSetCache(CHANNELS, &result, func() error {
 		return iptv.get("channels.json", &result)
 	})
 	if err != nil {
@@ -194,7 +197,7 @@ type StreamsResult struct {
 
 func (iptv *IPTV) getAllStream() StreamsResult {
 	var result []Stream
-	err := iptv.Cache.GetOrSetCache(STREAMS, &result, func() error {
+	err := iptv.cache.GetOrSetCache(STREAMS, &result, func() error {
 		return iptv.get("streams.json", &result)
 	})
 	if err != nil {
@@ -234,7 +237,7 @@ func (iptv *IPTV) getAllChannelStreamParallel() (*[]Channel, *[]Stream, error) {
 
 func (iptv *IPTV) getChannelsHasStream() (*[]Channel, error) {
 	var results []Channel
-	err := iptv.Cache.GetOrSetCache(CHANNEL_HAS_STREAM, &results, func() error {
+	err := iptv.cache.GetOrSetCache(CHANNEL_HAS_STREAM, &results, func() error {
 		channels, streams, err := iptv.getAllChannelStreamParallel()
 		if err != nil {
 			return err
@@ -257,7 +260,18 @@ func (iptv *IPTV) getChannelsHasStream() (*[]Channel, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &results, nil
+
+	if !iptv.config.config.IPTV.IsHideNSFWChannel {
+		return &results, nil
+	}
+
+	var newRes []Channel
+	for _, item := range results {
+		if !item.IsNSFW {
+			newRes = append(newRes, item)
+		}
+	}
+	return &newRes, nil
 }
 
 type IPTVFilter string
@@ -266,6 +280,7 @@ const (
 	COUNTRY  IPTVFilter = "COUNTRY"
 	CATEGORY IPTVFilter = "CATEGORY"
 	LANGUAGE IPTVFilter = "LANGUAGE"
+	PLAYLIST IPTVFilter = "PLAYLIST"
 )
 
 var AllIPTVFilter = []struct {
@@ -275,6 +290,7 @@ var AllIPTVFilter = []struct {
 	{COUNTRY, "COUNTRY"},
 	{CATEGORY, "CATEGORY"},
 	{LANGUAGE, "LANGUAGE"},
+	{PLAYLIST, "PLAYLIST"},
 }
 
 func (iptv *IPTV) GetFilteredChannels(filter IPTVFilter, code string) ChannelsResult {
@@ -286,6 +302,28 @@ func (iptv *IPTV) GetFilteredChannels(filter IPTVFilter, code string) ChannelsRe
 		filterFn = func(c Channel) bool { return slices.Contains(c.Categories, code) }
 	case LANGUAGE:
 		filterFn = func(c Channel) bool { return slices.Contains(c.Languages, code) }
+	case PLAYLIST:
+		playlistId, err := strconv.Atoi(code)
+		if err != nil {
+			errStr := err.Error()
+			return ChannelsResult{
+				Error: &errStr,
+			}
+		}
+		playlistItems, err := iptv.db.ListPlaylistItem(playlistId)
+		if err != nil {
+			errStr := err.Error()
+			return ChannelsResult{
+				Error: &errStr,
+			}
+		}
+		var channelIds []string
+		for _, item := range *playlistItems {
+			channelIds = append(channelIds, item.ChannelID)
+		}
+		filterFn = func(c Channel) bool {
+			return slices.Contains(channelIds, c.ID)
+		}
 	default:
 		return ChannelsResult{}
 	}
@@ -356,4 +394,114 @@ func (iptv *IPTV) GetChannelWithStream(channelId string) ChannelWithStreamsResul
 	return ChannelWithStreamsResult{
 		Data: &result,
 	}
+}
+
+type PlaylistsResult struct {
+	Error *string     `json:"error"`
+	Data  *[]Playlist `json:"data"`
+}
+
+func (iptv *IPTV) GetAllPlaylist() PlaylistsResult {
+	playlists, err := iptv.db.ListPlaylist()
+	if err != nil {
+		errStr := err.Error()
+		return PlaylistsResult{
+			Error: &errStr,
+		}
+	}
+
+	return PlaylistsResult{
+		Data: playlists,
+	}
+}
+
+type SinglePlaylistResult struct {
+	Error *string   `json:"error"`
+	Data  *Playlist `json:"data"`
+}
+
+func (iptv *IPTV) CreatePlaylist(title string) SinglePlaylistResult {
+	result, err := iptv.db.CreatePlaylist(title)
+	if err != nil {
+		errStr := err.Error()
+		return SinglePlaylistResult{
+			Error: &errStr,
+		}
+	}
+
+	return SinglePlaylistResult{
+		Data: result,
+	}
+}
+
+func (iptv *IPTV) UpdatePlaylist(playlistId int, title string) SinglePlaylistResult {
+	result, err := iptv.db.UpdatePlaylist(playlistId, title)
+	if err != nil {
+		errStr := err.Error()
+		return SinglePlaylistResult{
+			Error: &errStr,
+		}
+	}
+
+	return SinglePlaylistResult{
+		Data: result,
+	}
+}
+
+func (iptv *IPTV) DeletePlaylist(playlistId int) *string {
+	err := iptv.db.DeletePlaylist(playlistId)
+	if err != nil {
+		errStr := err.Error()
+		return &errStr
+	}
+
+	return nil
+}
+
+type PlaylistItemsResult struct {
+	Error *string         `json:"error"`
+	Data  *[]PlaylistItem `json:"data"`
+}
+
+func (iptv *IPTV) GetAllChannelPlaylistItem(channelId string) PlaylistItemsResult {
+	playlists, err := iptv.db.ListChannelPlaylist(channelId)
+	if err != nil {
+		errStr := err.Error()
+		return PlaylistItemsResult{
+			Error: &errStr,
+		}
+	}
+
+	return PlaylistItemsResult{
+		Data: playlists,
+	}
+}
+
+type SinglePlaylistItemResult struct {
+	Error *string       `json:"error"`
+	Data  *PlaylistItem `json:"data"`
+}
+
+func (iptv *IPTV) CreatePlaylistItem(playlistId int, channelId string) SinglePlaylistItemResult {
+	result, err := iptv.db.CreatePlaylistItem(playlistId, channelId)
+	if err != nil {
+		errStr := err.Error()
+		return SinglePlaylistItemResult{
+			Error: &errStr,
+		}
+	}
+
+	return SinglePlaylistItemResult{
+		Data: result,
+	}
+}
+
+func (iptv *IPTV) DeletePlaylistItem(playlistId int, channelId string) *string {
+	err := iptv.db.DeletePlaylistItem(playlistId, channelId)
+	if err != nil {
+		errStr := err.Error()
+		return &errStr
+	}
+
+	return nil
 }

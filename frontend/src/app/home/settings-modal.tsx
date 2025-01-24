@@ -38,10 +38,10 @@ import {
   DeleteConfigs,
   SetConfigs,
 } from "wailsjs/go/service/ConfigStore";
-import { n } from "react-router/dist/development/fog-of-war-Ckdfl79L";
 
 const formSchema = z.object({
   isUseAltChannelName: z.boolean(),
+  isHideNSFWChannel: z.boolean(),
   isOverrideApi: z.boolean(),
   apiUrl: z.string().url(),
   cacheDuration: z.string(),
@@ -52,17 +52,20 @@ const formSchema = z.object({
   isAutoShowCaption: z.boolean(),
 
   isUseSystemTitlebar: z.boolean(),
+  isMaximizeAtStartup: z.boolean(),
 });
 
 interface DBConfigStruct {
+  "iptv.isUseAltChannelName"?: string;
+  "iptv.isHideNSFWChannel"?: string;
   "iptv.isOverrideApi"?: string;
   "iptv.apiUrl"?: string;
   "iptv.cacheDuration"?: string;
-  "iptv.isUseAltChannelName"?: string;
   "network.isUseDOH"?: string;
   "network.dohResolverUrl"?: string;
   "caption.isAutoShow"?: string;
   "userInterface.isUseSystemTitlebar"?: string;
+  "userInterface.isMaximizeAtStartup"?: string;
 }
 
 const cacheDurationOptions = [
@@ -111,17 +114,19 @@ const SettingsModal: React.FC<Props> = ({ open, onClose }) => {
   useEffect(() => {
     if (config) {
       form.reset({
-        isUseAltChannelName: config?.iptv.isUseAltChannelName,
-        isOverrideApi: config?.iptv.isOverrideApi,
-        apiUrl: config?.iptv.apiUrl,
-        cacheDuration: config?.iptv.cacheDuration.toString(),
+        isUseAltChannelName: config.iptv.isUseAltChannelName,
+        isHideNSFWChannel: config.iptv.isHideNSFWChannel,
+        isOverrideApi: config.iptv.isOverrideApi,
+        apiUrl: config.iptv.apiUrl,
+        cacheDuration: config.iptv.cacheDuration.toString(),
 
-        isUseDOH: config?.network.isUseDOH,
-        dohResolverUrl: config?.network.dohResolverUrl,
+        isUseDOH: config.network.isUseDOH,
+        dohResolverUrl: config.network.dohResolverUrl,
 
-        isAutoShowCaption: config?.caption.isAutoShow,
+        isAutoShowCaption: config.caption.isAutoShow,
 
-        isUseSystemTitlebar: config?.userInterface.isUseSystemTitlebar,
+        isUseSystemTitlebar: config.userInterface.isUseSystemTitlebar,
+        isMaximizeAtStartup: config.userInterface.isMaximizeAtStartup,
       });
     }
   }, [config]);
@@ -169,6 +174,10 @@ const SettingsModal: React.FC<Props> = ({ open, onClose }) => {
         values.isUseAltChannelName,
         defaultConfig.iptv.isUseAltChannelName
       ),
+      "iptv.isHideNSFWChannel": boolVal(
+        values.isHideNSFWChannel,
+        defaultConfig.iptv.isHideNSFWChannel
+      ),
       "iptv.isOverrideApi": boolVal(
         values.isOverrideApi,
         defaultConfig.iptv.isOverrideApi
@@ -193,6 +202,10 @@ const SettingsModal: React.FC<Props> = ({ open, onClose }) => {
       "userInterface.isUseSystemTitlebar": boolVal(
         values.isUseSystemTitlebar,
         defaultConfig.userInterface.isUseSystemTitlebar
+      ),
+      "userInterface.isMaximizeAtStartup": boolVal(
+        values.isMaximizeAtStartup,
+        defaultConfig.userInterface.isMaximizeAtStartup
       ),
     };
     let needDelete: string[] = [];
@@ -276,6 +289,29 @@ const SettingsModal: React.FC<Props> = ({ open, onClose }) => {
                           </FormLabel>
                           <FormDescription>
                             Use alternative channel name (usually local name).
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="isHideNSFWChannel"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">
+                            Hide NSFW Channel
+                          </FormLabel>
+                          <FormDescription>
+                            Hide all NSFW / adult channel from the list.
                           </FormDescription>
                         </div>
                         <FormControl>
@@ -446,6 +482,29 @@ const SettingsModal: React.FC<Props> = ({ open, onClose }) => {
                           </FormLabel>
                           <FormDescription>
                             Use default system titlebar instead of custom one.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="isMaximizeAtStartup"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">
+                            Auto Maximize Window
+                          </FormLabel>
+                          <FormDescription>
+                            Automatically maximize window at application
+                            startup.
                           </FormDescription>
                         </div>
                         <FormControl>

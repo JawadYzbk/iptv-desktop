@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"io"
 	"net"
 	"net/http"
@@ -46,7 +47,11 @@ func (p *Proxy) Middleware(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/image-proxy") {
-			p.handleImage(w, r)
+			p.handleRequest(w, r, true)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/proxy") {
+			p.handleRequest(w, r, false)
 			return
 		}
 
@@ -54,8 +59,14 @@ func (p *Proxy) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-func (p *Proxy) handleImage(w http.ResponseWriter, r *http.Request) {
-	reqUrl := r.URL.Query().Get("url")
+func (p *Proxy) handleRequest(w http.ResponseWriter, r *http.Request, isWithCacheHeader bool) {
+	encodedUrl := strings.Split(r.URL.Path, "/")[2]
+	decodedUrl, err := base64.StdEncoding.DecodeString(encodedUrl)
+	if err != nil {
+		p.writeError(w, err)
+		return
+	}
+	reqUrl := string(decodedUrl)
 
 	newUrl, err := url.Parse(reqUrl)
 	if err != nil {
@@ -82,7 +93,7 @@ func (p *Proxy) handleImage(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 
 	for key, value := range resp.Header {
-		if key == "Access-Control-Allow-Origin" || key == "Cache-Control" {
+		if key == "Access-Control-Allow-Origin" || (isWithCacheHeader && key == "Cache-Control") {
 			continue
 		}
 		for _, item := range value {
@@ -91,7 +102,9 @@ func (p *Proxy) handleImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Add("Access-Control-Allow-Origin", "*")
-	w.Header().Add("Cache-Control", "public, max-age=2592000")
+	if isWithCacheHeader {
+		w.Header().Add("Cache-Control", "public, max-age=2592000")
+	}
 
 	w.WriteHeader(resp.StatusCode)
 

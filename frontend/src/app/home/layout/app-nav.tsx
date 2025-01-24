@@ -5,6 +5,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useParams } from "react-router";
 import React, {
+  use,
   useCallback,
   useEffect,
   useMemo,
@@ -24,14 +25,19 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import { useDebounce } from "use-debounce";
 import { Separator } from "../../../components/ui/separator";
 import { service } from "wailsjs/go/models";
+import PlaylistContext from "@/context/playlist.context";
+import { MoreVerticalIcon, PlusIcon } from "lucide-react";
+import PlaylistDropdown from "./playlist-dropdown";
 
 interface SubNavItem {
   label: string;
   code: string;
   icon?: React.ReactNode;
+  playlist?: service.Playlist;
 }
 
 const AppNav: React.FC = () => {
+  const { playlists, doShowCreatePlaylist } = use(PlaylistContext);
   const isScrolled = useRef(false);
   const [listRef, setListRef] = useState<FixedSizeList<any> | null>(null);
   const { filterType, code } = useParams();
@@ -99,6 +105,16 @@ const AppNav: React.FC = () => {
         }
         break;
 
+      case service.IPTVFilter.PLAYLIST:
+        setSubmenus(
+          playlists.map((item) => ({
+            label: item.title,
+            code: item.playlistId.toString(),
+            playlist: item,
+          }))
+        );
+        break;
+
       default:
         setSubmenus([]);
         break;
@@ -107,7 +123,7 @@ const AppNav: React.FC = () => {
 
   useEffect(() => {
     startLoading(doFetch);
-  }, [filterType]);
+  }, [filterType, playlists]);
 
   useEffect(() => {
     if (submenus.length === 0 || isScrolled.current || !listRef) return;
@@ -148,6 +164,17 @@ const AppNav: React.FC = () => {
         />
       </div>
       <Separator />
+      {filterType === service.IPTVFilter.PLAYLIST && (
+        <React.Fragment>
+          <div className="p-2">
+            <SidebarMenuButton onClick={doShowCreatePlaylist}>
+              <PlusIcon />
+              <span className="truncate">New Playlist</span>
+            </SidebarMenuButton>
+          </div>
+          <Separator />
+        </React.Fragment>
+      )}
       <div className="flex-1">
         {isLoading ? (
           <Spinner />
@@ -166,19 +193,29 @@ const AppNav: React.FC = () => {
                   const item = filteredItems[index];
                   return (
                     <div className="px-2 py-1" style={style}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={code === item.code}
-                        className="min-w-0"
-                        tooltip={{
-                          children: item.label,
-                        }}
-                      >
-                        <Link to={`/home/${filterType}/${item.code}`}>
-                          {item.icon}
-                          <span className="truncate">{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
+                      <div className="relative">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={code === item.code}
+                          className={`min-w-0 ${item.playlist ? "pr-8" : ""}`}
+                          tooltip={{
+                            children: item.label,
+                          }}
+                        >
+                          <Link to={`/home/${filterType}/${item.code}`}>
+                            {item.icon}
+                            <span className="truncate">{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                        {item.playlist && (
+                          <PlaylistDropdown
+                            playlist={item.playlist}
+                            className="absolute right-0 top-0 bottom-0 z-10 w-auto h-auto px-2"
+                          >
+                            <MoreVerticalIcon />
+                          </PlaylistDropdown>
+                        )}
+                      </div>
                     </div>
                   );
                 }}

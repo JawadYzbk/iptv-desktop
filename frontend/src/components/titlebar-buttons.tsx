@@ -34,7 +34,7 @@ const TitlebarButtons: React.FC<Props> = ({ className, rightComponent }) => {
         <Button
           size="icon"
           variant="ghost"
-          className="h-full w-12 not-draggable rounded-none"
+          className="h-full w-12 rounded-none"
           onClick={doMinimize}
         >
           <MinusIcon />
@@ -42,7 +42,7 @@ const TitlebarButtons: React.FC<Props> = ({ className, rightComponent }) => {
         <Button
           size="icon"
           variant="ghost"
-          className="h-full w-12 not-draggable rounded-none"
+          className="h-full w-12 rounded-none"
           onClick={doToggleMaximize}
         >
           <SquareIcon />
@@ -50,7 +50,7 @@ const TitlebarButtons: React.FC<Props> = ({ className, rightComponent }) => {
         <Button
           size="icon"
           variant="ghost"
-          className="h-full w-12 not-draggable hover:bg-destructive rounded-none"
+          className="h-full w-12 hover:bg-destructive rounded-none"
           onClick={doQuit}
         >
           <XIcon />

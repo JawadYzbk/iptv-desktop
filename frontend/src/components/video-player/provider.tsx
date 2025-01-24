@@ -1,15 +1,24 @@
 import React, { use, useEffect, useState } from "react";
 import Player from "video.js/dist/types/player";
-import VideoPlayerContext, { CaptionItem } from "./context";
+import VideoPlayerContext, { CaptionItem, PlayerSource } from "./context";
 import ConfigContext from "@/context/config.context";
 
 interface Props {
   player?: Player;
   children?: React.ReactNode;
+  sources: PlayerSource[];
+  sourceIndex: number;
+  setSourceIndex: (index: number) => void;
 }
 export const VOLUME_KEY = "VOLUME";
 export const MUTED_KEY = "MUTED";
-const VideoPlayerProvider: React.FC<Props> = ({ player, children }) => {
+const VideoPlayerProvider: React.FC<Props> = ({
+  player,
+  children,
+  sources,
+  sourceIndex,
+  setSourceIndex,
+}) => {
   const { config } = use(ConfigContext);
   const [isUserActive, setIsUserActive] = useState(false);
   const [isMouseOverControl, setIsMouseOverControl] = useState(false);
@@ -235,6 +244,9 @@ const VideoPlayerProvider: React.FC<Props> = ({ player, children }) => {
         isBuffering,
         captionList,
         doSetCaption,
+        sources,
+        sourceIndex,
+        setSourceIndex,
       }}
     >
       {children}

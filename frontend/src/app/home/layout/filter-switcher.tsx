@@ -3,6 +3,7 @@ import {
   ChevronsUpDown,
   EarthIcon,
   LanguagesIcon,
+  ListVideoIcon,
   TagIcon,
 } from "lucide-react";
 
@@ -37,6 +38,11 @@ const filters = [
     title: "Language",
     path: service.IPTVFilter.LANGUAGE,
     icon: LanguagesIcon,
+  },
+  {
+    title: "My Playlist",
+    path: service.IPTVFilter.PLAYLIST,
+    icon: ListVideoIcon,
   },
 ];
 
@@ -76,7 +82,7 @@ const FilterSwitcher: React.FC = () => {
               <DropdownMenuItem
                 key={item.path}
                 onSelect={() => navigate(`/home/${item.path}`)}
-                className="gap-2 p-2"
+                className="gap-2 p-2 cursor-pointer"
               >
                 <div className="flex size-6 items-center justify-center rounded-sm bg-primary text-primary-foreground">
                   <item.icon className="size-4 shrink-0" />

@@ -12,7 +12,10 @@ export const useChannelList = (filterType?: string, code?: string) => {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (!filterType || !code) return;
+    if (!filterType || !code) {
+      setChannels([]);
+      return;
+    }
     var filter = filterType as service.IPTVFilter;
 
     startLoading(async () => {

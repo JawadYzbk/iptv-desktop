@@ -12,6 +12,7 @@ export namespace service {
 	    COUNTRY = "COUNTRY",
 	    CATEGORY = "CATEGORY",
 	    LANGUAGE = "LANGUAGE",
+	    PLAYLIST = "PLAYLIST",
 	}
 	export class AppConfigCaption {
 	    isAutoShow: boolean;
@@ -30,6 +31,7 @@ export namespace service {
 	    apiUrl: string;
 	    cacheDuration: number;
 	    isUseAltChannelName: boolean;
+	    isHideNSFWChannel: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppConfigIPTV(source);
@@ -41,6 +43,7 @@ export namespace service {
 	        this.apiUrl = source["apiUrl"];
 	        this.cacheDuration = source["cacheDuration"];
 	        this.isUseAltChannelName = source["isUseAltChannelName"];
+	        this.isHideNSFWChannel = source["isHideNSFWChannel"];
 	    }
 	}
 	export class AppConfigNetwork {
@@ -59,6 +62,7 @@ export namespace service {
 	}
 	export class AppConfigUserInterface {
 	    isUseSystemTitlebar: boolean;
+	    isMaximizeAtStartup: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppConfigUserInterface(source);
@@ -67,6 +71,7 @@ export namespace service {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.isUseSystemTitlebar = source["isUseSystemTitlebar"];
+	        this.isMaximizeAtStartup = source["isMaximizeAtStartup"];
 	    }
 	}
 	export class Category {
@@ -419,6 +424,164 @@ export namespace service {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.error = source["error"];
 	        this.data = this.convertValues(source["data"], Language);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Playlist {
+	    playlistId: number;
+	    title: string;
+	    createdt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Playlist(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.playlistId = source["playlistId"];
+	        this.title = source["title"];
+	        this.createdt = source["createdt"];
+	    }
+	}
+	export class PlaylistItem {
+	    playlistId: number;
+	    channelId: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PlaylistItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.playlistId = source["playlistId"];
+	        this.channelId = source["channelId"];
+	    }
+	}
+	export class PlaylistItemsResult {
+	    error?: string;
+	    data?: PlaylistItem[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PlaylistItemsResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.error = source["error"];
+	        this.data = this.convertValues(source["data"], PlaylistItem);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class PlaylistsResult {
+	    error?: string;
+	    data?: Playlist[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PlaylistsResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.error = source["error"];
+	        this.data = this.convertValues(source["data"], Playlist);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class SinglePlaylistItemResult {
+	    error?: string;
+	    data?: PlaylistItem;
+	
+	    static createFrom(source: any = {}) {
+	        return new SinglePlaylistItemResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.error = source["error"];
+	        this.data = this.convertValues(source["data"], PlaylistItem);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class SinglePlaylistResult {
+	    error?: string;
+	    data?: Playlist;
+	
+	    static createFrom(source: any = {}) {
+	        return new SinglePlaylistResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.error = source["error"];
+	        this.data = this.convertValues(source["data"], Playlist);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

@@ -31,9 +31,9 @@ const ChannelSelector: React.FC<Props> = ({ ref, isVisible }) => {
   const { filterType, code, channelId } = useParams();
   const { isLoading, channels, search, setSearch, originalChannels } =
     useChannelList(filterType, code);
-  const [scrollPos, setScrollPos] = useState<"top" | "middle" | "bottom">(
-    "top"
-  );
+  const [scrollPos, setScrollPos] = useState<
+    "top" | "middle" | "bottom" | "no-scroll"
+  >("top");
 
   const bindListRef = useCallback((node: FixedSizeList<any>) => {
     setListRef(node);
@@ -127,6 +127,8 @@ const ChannelSelector: React.FC<Props> = ({ ref, isVisible }) => {
                 ? "at-top"
                 : scrollPos === "bottom"
                 ? "at-bottom"
+                : scrollPos === "no-scroll"
+                ? "no-scroll"
                 : ""
             }`}
           >
@@ -142,15 +144,15 @@ const ChannelSelector: React.FC<Props> = ({ ref, isVisible }) => {
                   itemKey={(idx) => channels[idx].id}
                   onScroll={({ scrollOffset }) => {
                     var pos: typeof scrollPos = "middle";
-                    if (scrollOffset < 10) {
+                    const isAtBottom = totalHeight < scrollOffset + height + 10;
+                    if (scrollOffset < 10 && isAtBottom) {
+                      pos = "no-scroll";
+                    } else if (totalHeight < scrollOffset + height + 10) {
+                      pos = "bottom";
+                    } else if (scrollOffset < 10) {
                       pos = "top";
                     }
-                    if (totalHeight < scrollOffset + height + 10) {
-                      pos = "bottom";
-                    }
-                    if (pos !== scrollPos) {
-                      setScrollPos(pos);
-                    }
+                    setScrollPos(pos);
                   }}
                 >
                   {({ index, style }) => {

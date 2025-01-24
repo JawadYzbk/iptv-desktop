@@ -8,7 +8,7 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList } from "react-window";
 import { useChannelList } from "@/hooks/use-channel-list";
 import ConfigContext, { IPTVView } from "@/context/config.context";
-import { MilestoneIcon } from "lucide-react";
+import { ArchiveIcon, MilestoneIcon } from "lucide-react";
 
 const gridConfig: GridConfig = {
   default: 2,
@@ -25,7 +25,7 @@ const Home: React.FC = () => {
   const { isLoading, channels } = useChannelList(filterType, code);
 
   useEffect(() => {
-    if (filterType && code) {
+    if (filterType) {
       const view: IPTVView = {
         filterType: filterType as service.IPTVFilter,
         code,
@@ -51,6 +51,15 @@ const Home: React.FC = () => {
         </div>
       ) : isLoading ? (
         <Spinner />
+      ) : channels.length === 0 ? (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center text-primary space-y-4">
+            <span>
+              <ArchiveIcon className="w-12 h-12 inline-block" />
+            </span>
+            <p className="font-bold">Nothing to show here!</p>
+          </div>
+        </div>
       ) : (
         <AutoSizer>
           {({ height, width }: AutoSizer["state"]) => (

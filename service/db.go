@@ -158,3 +158,135 @@ func (d *DB) SetMultipleConfig(configs []dbConfig) error {
 
 	return tx.Commit()
 }
+
+type Playlist struct {
+	PlaylistID int    `json:"playlistId"`
+	Title      string `json:"title"`
+	CreatedAt  string `json:"createdt"`
+}
+
+func (d *DB) ListPlaylist() (*[]Playlist, error) {
+	query := "SELECT playlistId, title, createdAt FROM playlists ORDER BY title ASC"
+	rows, err := d.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []Playlist
+	for rows.Next() {
+		var result Playlist
+		err = rows.Scan(&result.PlaylistID, &result.Title, &result.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, result)
+	}
+
+	err = rows.Err()
+	return &results, err
+}
+
+func (d *DB) CreatePlaylist(title string) (*Playlist, error) {
+	var result Playlist
+	query := "INSERT INTO playlists (title) VALUES (?) RETURNING playlistId, createdAt"
+	if err := d.db.QueryRow(query, title).Scan(&result.PlaylistID, &result.CreatedAt); err != nil {
+		return nil, err
+	}
+	result.Title = title
+
+	return &result, nil
+}
+
+func (d *DB) UpdatePlaylist(playlistId int, title string) (*Playlist, error) {
+	var result Playlist
+	query := "UPDATE playlists SET title = ? WHERE playlistId = ? RETURNING createdAt"
+	if err := d.db.QueryRow(query, title, playlistId).Scan(&result.CreatedAt); err != nil {
+		return nil, err
+	}
+	result.Title = title
+	result.PlaylistID = playlistId
+
+	return &result, nil
+}
+
+func (d *DB) DeletePlaylist(playlistId int) error {
+	query := "DELETE FROM playlists WHERE playlistId = ?"
+	_, err := d.db.Exec(query, playlistId)
+
+	return err
+}
+
+type PlaylistItem struct {
+	PlaylistID int    `json:"playlistId"`
+	ChannelID  string `json:"channelId"`
+}
+
+func (d *DB) ListPlaylistItem(playlistId int) (*[]PlaylistItem, error) {
+	query := "SELECT playlistId, channelId FROM playlistItems WHERE playlistId = ?"
+	rows, err := d.db.Query(query, playlistId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []PlaylistItem
+
+	for rows.Next() {
+		var result PlaylistItem
+		err = rows.Scan(&result.PlaylistID, &result.ChannelID)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, result)
+	}
+
+	err = rows.Err()
+	return &results, err
+}
+
+func (d *DB) ListChannelPlaylist(channelId string) (*[]PlaylistItem, error) {
+	query := "SELECT playlistId, channelId FROM playlistItems WHERE channelId = ?"
+	rows, err := d.db.Query(query, channelId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []PlaylistItem
+
+	for rows.Next() {
+		var result PlaylistItem
+		err = rows.Scan(&result.PlaylistID, &result.ChannelID)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, result)
+	}
+
+	err = rows.Err()
+	return &results, err
+}
+
+func (d *DB) CreatePlaylistItem(playlistId int, channelId string) (*PlaylistItem, error) {
+	query := "INSERT INTO playlistItems (playlistId, channelId) VALUES (?, ?)"
+	_, err := d.db.Exec(query, playlistId, channelId)
+	if err != nil {
+		return nil, err
+	}
+	var result PlaylistItem
+	result.PlaylistID = playlistId
+	result.ChannelID = channelId
+
+	return &result, nil
+}
+
+func (d *DB) DeletePlaylistItem(playlistId int, channelId string) error {
+	query := "DELETE FROM playlistItems WHERE playlistId = ? AND channelId = ?"
+	_, err := d.db.Exec(query, playlistId, channelId)
+
+	return err
+}

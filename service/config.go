@@ -1,12 +1,16 @@
 package service
 
-import "strconv"
+import (
+	"runtime"
+	"strconv"
+)
 
 type AppConfigIPTV struct {
 	IsOverrideApi       bool   `json:"isOverrideApi"`
 	ApiUrl              string `json:"apiUrl"`
 	CacheDuration       int    `json:"cacheDuration"`
 	IsUseAltChannelName bool   `json:"isUseAltChannelName"`
+	IsHideNSFWChannel   bool   `json:"isHideNSFWChannel"`
 }
 
 type AppConfigNetwork struct {
@@ -20,6 +24,7 @@ type AppConfigCaption struct {
 
 type AppConfigUserInterface struct {
 	IsUseSystemTitlebar bool `json:"isUseSystemTitlebar"`
+	IsMaximizeAtStartup bool `json:"isMaximizeAtStartup"`
 }
 
 type Config struct {
@@ -56,6 +61,7 @@ func (cs *ConfigStore) DefaultConfig() Config {
 			ApiUrl:              "https://iptv-org.github.io/api",
 			CacheDuration:       60 * 60 * 24,
 			IsUseAltChannelName: true,
+			IsHideNSFWChannel:   true,
 		},
 		Network: AppConfigNetwork{
 			IsUseDOH:       false,
@@ -65,7 +71,8 @@ func (cs *ConfigStore) DefaultConfig() Config {
 			IsAutoShow: false,
 		},
 		UserInterface: AppConfigUserInterface{
-			IsUseSystemTitlebar: false,
+			IsUseSystemTitlebar: runtime.GOOS != "windows",
+			IsMaximizeAtStartup: true,
 		},
 	}
 }
@@ -91,14 +98,21 @@ func (c *ConfigStore) loadDB() error {
 			}
 		case "iptv.isUseAltChannelName":
 			c.config.IPTV.IsUseAltChannelName = config.Value == "1"
+		case "iptv.isHideNSFWChannel":
+			c.config.IPTV.IsHideNSFWChannel = config.Value == "1"
+
 		case "network.isUseDOH":
 			c.config.Network.IsUseDOH = config.Value == "1"
 		case "network.dohResolverUrl":
 			c.config.Network.DOHResolverUrl = config.Value
+
 		case "caption.isAutoShow":
 			c.config.Caption.IsAutoShow = config.Value == "1"
+
 		case "userInterface.isUseSystemTitlebar":
 			c.config.UserInterface.IsUseSystemTitlebar = config.Value == "1"
+		case "userInterface.isMaximizeAtStartup":
+			c.config.UserInterface.IsMaximizeAtStartup = config.Value == "1"
 
 		default:
 			deletedKeys = append(deletedKeys, config.Key)

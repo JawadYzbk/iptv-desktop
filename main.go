@@ -27,11 +27,11 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	cacheStore, err := service.NewCacheStore(configStore.GetConfig().IPTV.CacheDuration)
+	cacheStore, err := service.NewCacheStore(configStore)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	iptv, err := service.NewIPTV(configStore.GetConfig().IPTV.ApiUrl, cacheStore, &app.ctx)
+	iptv, err := service.NewIPTV(configStore, cacheStore, db, &app.ctx)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -41,13 +41,22 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	isCustomTitlebar := !configStore.GetConfig().UserInterface.IsUseSystemTitlebar
+	currentConfig := configStore.GetConfig()
+
+	isCustomTitlebar := !currentConfig.UserInterface.IsUseSystemTitlebar
+
+	var windowStartState options.WindowStartState
+	if currentConfig.UserInterface.IsMaximizeAtStartup {
+		windowStartState = options.Maximised
+	} else {
+		windowStartState = options.Normal
+	}
 
 	err = wails.Run(&options.App{
 		Title:            "IPTV Desktop",
 		Width:            1280,
 		Height:           720,
-		WindowStartState: options.Maximised,
+		WindowStartState: windowStartState,
 		StartHidden:      true,
 		AssetServer: &assetserver.Options{
 			Assets:     assets,

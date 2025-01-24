@@ -8,7 +8,7 @@ const PlayPauseButton: React.FC = () => {
 
   return (
     <Button
-      className="size-16 rounded-full p-0 not-draggable"
+      className="size-16 rounded-full p-0"
       onClick={() => {
         if (isPlaying) {
           doPause();

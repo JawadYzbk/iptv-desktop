@@ -33,11 +33,11 @@ var AllCacheType = []struct {
 }
 
 type CacheStore struct {
-	CacheDuration int
-	BaseDir       string
+	config  *ConfigStore
+	BaseDir string
 }
 
-func NewCacheStore(cacheDuration int) (*CacheStore, error) {
+func NewCacheStore(config *ConfigStore) (*CacheStore, error) {
 
 	baseDir := filepath.Join(xdg.CacheHome, "iptv-desktop")
 	_, err := os.Stat(baseDir)
@@ -48,8 +48,8 @@ func NewCacheStore(cacheDuration int) (*CacheStore, error) {
 	}
 
 	return &CacheStore{
-		CacheDuration: cacheDuration,
-		BaseDir:       baseDir,
+		config:  config,
+		BaseDir: baseDir,
 	}, nil
 }
 
@@ -68,7 +68,7 @@ func (cs *CacheStore) getCache(name CacheType, pointer any) (bool, error) {
 		return false, err
 	}
 	now := time.Now()
-	fileExp := stat.ModTime().Add(time.Second * time.Duration(cs.CacheDuration))
+	fileExp := stat.ModTime().Add(time.Second * time.Duration(cs.config.config.IPTV.CacheDuration))
 	if fileExp.Before(now) {
 		err := os.Remove(fullPath)
 		if err != nil {

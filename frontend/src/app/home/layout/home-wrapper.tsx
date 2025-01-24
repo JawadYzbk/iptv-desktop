@@ -19,26 +19,22 @@ const HomeWrapper: React.FC = () => {
       <AppSidebar />
       <SidebarInset className="flex flex-col overflow-hidden">
         <header
-          className={`flex shrink-0 items-center gap-2 border-b bg-background draggable pl-4 ${
-            config?.userInterface.isUseSystemTitlebar ? "h-16" : "h-12"
+          className={`flex shrink-0 items-center gap-2 border-b bg-background pl-4 ${
+            config?.userInterface.isUseSystemTitlebar ? "h-16" : "h-auto"
           }`}
         >
-          <SidebarTrigger className="-ml-1 not-draggable" />
+          <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <div className="flex-1 font-bold text-primary text-center">
+          <div className="flex-1 font-bold text-primary text-center cursor-default">
             IPTV Desktop
           </div>
           <Separator orientation="vertical" className="ml-2 h-4" />
           <SettingsButton
             variant="ghost"
             size="icon"
-            className="h-7 w-7 -mr-1 not-draggable"
+            className="h-7 w-7 -mr-1"
           />
-          <FullScreenButton
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 not-draggable"
-          />
+          <FullScreenButton variant="ghost" size="icon" className="h-7 w-7" />
           <div className="w-2"></div>
           <TitlebarButtons
             rightComponent={

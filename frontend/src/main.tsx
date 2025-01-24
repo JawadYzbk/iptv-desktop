@@ -1,19 +1,18 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import Router from "./router";
 import "./assets/style.css";
-import ConfigProvider from "./context/config.provider";
-import { Toaster } from "@/components/ui/sonner";
+import LoadingScreen from "./components/loading-screen";
 
 const container = document.getElementById("root");
 
 const root = createRoot(container!);
 
+const App = React.lazy(() => import("./app"));
+
 root.render(
   <React.Fragment>
-    <ConfigProvider>
-      <Router />
-      <Toaster position="top-center" />
-    </ConfigProvider>
+    <Suspense fallback={<LoadingScreen />}>
+      <App />
+    </Suspense>
   </React.Fragment>
 );

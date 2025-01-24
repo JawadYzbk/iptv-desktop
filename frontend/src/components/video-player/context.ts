@@ -9,6 +9,12 @@ export interface CaptionItem {
   isActive: boolean;
 }
 
+export interface PlayerSource {
+  src: string;
+  type?: string;
+  headers?: { [key: string]: string };
+}
+
 interface IVideoPlayerContext {
   isUserActive: boolean;
   setIsUserActive: (isActive: boolean) => void;
@@ -28,6 +34,9 @@ interface IVideoPlayerContext {
   isBuffering: boolean;
   captionList: CaptionItem[];
   doSetCaption: (caption?: CaptionItem) => void;
+  sources: PlayerSource[];
+  sourceIndex: number;
+  setSourceIndex: (index: number) => void;
 }
 const VideoPlayerContext = createContext<IVideoPlayerContext>({
   isUserActive: false,
@@ -47,5 +56,8 @@ const VideoPlayerContext = createContext<IVideoPlayerContext>({
   isBuffering: false,
   captionList: [],
   doSetCaption: () => {},
+  sources: [],
+  sourceIndex: 0,
+  setSourceIndex: () => {},
 });
 export default VideoPlayerContext;

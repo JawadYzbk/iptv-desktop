@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { service } from "wailsjs/go/models";
 import ConfigContext, { IPTVView } from "./config.context";
-import Icon from "@/assets/images/icon.png";
 import { GetConfig } from "wailsjs/go/service/ConfigStore";
 import {
   EnterFullScreen,
   ExitFullScreen,
   IsFullScreen,
 } from "wailsjs/go/main/App";
+import LoadingScreen from "@/components/loading-screen";
 
 interface Props {
   children?: React.ReactNode;
@@ -46,12 +46,12 @@ const ConfigProvider: React.FC<Props> = ({ children }) => {
 
   const enterFullScreen = async () => {
     await EnterFullScreen();
-    setIsFullScreen(await IsFullScreen());
+    setIsFullScreen(true);
   };
 
   const exitFullScreen = async () => {
     await ExitFullScreen();
-    setIsFullScreen(await IsFullScreen());
+    setIsFullScreen(false);
   };
 
   return isLoaded ? (
@@ -68,12 +68,7 @@ const ConfigProvider: React.FC<Props> = ({ children }) => {
       {children}
     </ConfigContext.Provider>
   ) : (
-    <div className="h-screen w-screen flex items-center justify-center">
-      <div className="flex items-center flex-col gap-2">
-        <img src={Icon} alt="IPTV Desktop" className="size-16" />
-        <h1 className="text-primary font-bold">IPTV Desktop</h1>
-      </div>
-    </div>
+    <LoadingScreen />
   );
 };
 export default ConfigProvider;
