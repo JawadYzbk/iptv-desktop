@@ -83,7 +83,23 @@ func main() {
 			DisableWebViewDrop: true,
 		},
 		Windows: &windows.Options{
-			Theme: windows.Dark,
+			Theme:        windows.Dark,
+			BackdropType: windows.None,
+			CustomTheme: &windows.ThemeSettings{
+				DarkModeTitleBar:   windows.RGB(9, 9, 16),
+				DarkModeTitleText:  windows.RGB(255, 255, 255),
+				DarkModeBorder:     windows.RGB(22, 22, 39),
+				LightModeTitleBar:  windows.RGB(9, 9, 16),
+				LightModeTitleText: windows.RGB(255, 255, 255),
+				LightModeBorder:    windows.RGB(22, 22, 39),
+
+				DarkModeTitleBarInactive:   windows.RGB(9, 9, 16),
+				DarkModeTitleTextInactive:  windows.RGB(255, 255, 255),
+				DarkModeBorderInactive:     windows.RGB(22, 22, 39),
+				LightModeTitleBarInactive:  windows.RGB(9, 9, 16),
+				LightModeTitleTextInactive: windows.RGB(255, 255, 255),
+				LightModeBorderInactive:    windows.RGB(22, 22, 39),
+			},
 		},
 		Linux: &linux.Options{
 			WebviewGpuPolicy: linux.WebviewGpuPolicyAlways,

@@ -93,6 +93,11 @@ func (p *Proxy) handleRequest(w http.ResponseWriter, r *http.Request, isWithCach
 			newReq.Header.Add(key, value)
 		}
 	}
+	var removedHeaders = []string{"Referer"}
+	for _, item := range removedHeaders {
+		newReq.Header.Del(item)
+	}
+
 	for key, value := range customHeaders {
 		newReq.Header.Del(key)
 		newReq.Header.Add(key, value)

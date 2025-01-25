@@ -50,7 +50,7 @@ const TitlebarButtons: React.FC<Props> = ({ className, rightComponent }) => {
         <Button
           size="icon"
           variant="ghost"
-          className="h-full w-12 hover:bg-destructive rounded-none"
+          className="h-full w-12 hover:bg-red-600 rounded-none"
           onClick={doQuit}
         >
           <XIcon />

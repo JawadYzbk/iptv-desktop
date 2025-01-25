@@ -54,7 +54,7 @@ const ChannelItem: React.FC<Props> = ({
       <h3
         className={`font-bold ${
           isVertical ? "line-clamp-2" : "truncate"
-        } min-w-0 flex-1`}
+        } min-w-0 flex-1 mr-6`}
       >
         {config?.iptv.isUseAltChannelName
           ? channel.alt_names?.[0] ?? channel.name

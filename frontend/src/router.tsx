@@ -18,13 +18,8 @@ const routes = createHashRouter([
         element: <RootNavigator />,
       },
       {
-        element: <HomeWrapper />,
-        children: [
-          {
-            path: "/home/:filterType/:code?",
-            element: <Home />,
-          },
-        ],
+        path: "/home/:filterType/:code?",
+        element: <Home />,
       },
       {
         path: "/home/:filterType/:code/:channelId",
