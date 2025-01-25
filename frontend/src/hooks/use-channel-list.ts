@@ -1,4 +1,5 @@
-import ConfigContext, { IPTVView } from "@/context/config.context";
+import ConfigContext from "@/context/config.context";
+import { ECustomEvent, RemovePlaylistItemEvent } from "@/lib/event";
 import { useContext, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
@@ -10,6 +11,18 @@ export const useChannelList = (filterType?: string, code?: string) => {
   const [isLoading, startLoading] = useTransition();
   const [channels, setChannels] = useState<service.Channel[]>([]);
   const [search, setSearch] = useState("");
+
+  const handleRemovePlaylistItem = (e: Event) => {
+    const data = e as CustomEvent<RemovePlaylistItemEvent>;
+    if (
+      filterType === service.IPTVFilter.PLAYLIST &&
+      data.detail.playlistId === Number(code)
+    ) {
+      setChannels((prev) => [
+        ...prev.filter((item) => item.id !== data.detail.channelId),
+      ]);
+    }
+  };
 
   useEffect(() => {
     if (!filterType || !code) {
@@ -29,6 +42,18 @@ export const useChannelList = (filterType?: string, code?: string) => {
         setChannels(res.data ?? []);
       }
     });
+
+    window.addEventListener(
+      ECustomEvent.removePlaylistItem,
+      handleRemovePlaylistItem
+    );
+
+    return () => {
+      window.removeEventListener(
+        ECustomEvent.removePlaylistItem,
+        handleRemovePlaylistItem
+      );
+    };
   }, [filterType, code]);
 
   const [debouncedSearch] = useDebounce(search, 300);

@@ -1,6 +1,7 @@
 import Spinner from "@/components/spinner";
 import TitlebarButtons from "@/components/titlebar-buttons";
 import VideoPlayer from "@/components/video-player";
+import { PlayerSource } from "@/components/video-player/context";
 import { dispatchCustomEvent, ECustomEvent } from "@/lib/event";
 import React, { useEffect, useMemo, useState, useTransition } from "react";
 import { useParams } from "react-router";
@@ -52,12 +53,22 @@ const Watch: React.FC = () => {
     };
   }, [channelId]);
 
-  const sources = useMemo(() => {
-    return (
-      channel?.streams.map((item) => ({
-        src: item.url,
-      })) ?? []
-    );
+  const sources: PlayerSource[] = useMemo(() => {
+    const result: PlayerSource[] =
+      channel?.streams.map((item) => {
+        const headers: { [key: string]: string } = {};
+        if (item.http_referrer) {
+          headers["X-Custom-Referer"] = item.http_referrer;
+        }
+        if (item.user_agent) {
+          headers["X-Custom-User-Agent"] = item.user_agent;
+        }
+        return {
+          src: item.url,
+          headers,
+        };
+      }) ?? [];
+    return result;
   }, [channel]);
 
   return (

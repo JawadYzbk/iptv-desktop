@@ -25,3 +25,7 @@ export function Quit() {
 export function ToggleMaximize() {
   return window['go']['main']['App']['ToggleMaximize']();
 }
+
+export function WindowShow() {
+  return window['go']['main']['App']['WindowShow']();
+}

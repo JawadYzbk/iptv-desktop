@@ -65,7 +65,6 @@ func main() {
 		BackgroundColour: &options.RGBA{R: 9, G: 9, B: 16, A: 1},
 		Frameless:        isCustomTitlebar,
 		OnStartup:        app.startup,
-		OnDomReady:       app.onDomReady,
 		Bind: []interface{}{
 			app,
 			cacheStore,

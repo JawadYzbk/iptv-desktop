@@ -1,7 +1,17 @@
 const generateProxy = (prefix: string, url: string) => {
-  const encodedUrl = encodeURIComponent(btoa(url));
-  const lastUrl = url.split("/").pop();
-  return prefix + encodedUrl + "/" + lastUrl;
+  if (url.startsWith(window.location.protocol + "//" + window.location.host)) {
+    return url;
+  }
+  if (url.startsWith(prefix)) {
+    return url;
+  }
+  if (url.startsWith("https://")) {
+    return prefix + "https/" + url.substring(8);
+  } else if (url.startsWith("http://")) {
+    return prefix + "http/" + url.substring(7);
+  }
+  alert("Unknown scheme: " + url);
+  throw new Error("Unknown scheme: " + url);
 };
 
 export const imageProxy = (url: string) => {

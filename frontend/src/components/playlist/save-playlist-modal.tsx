@@ -19,6 +19,7 @@ import {
   GetAllChannelPlaylistItem,
 } from "wailsjs/go/service/IPTV";
 import { toast } from "sonner";
+import { dispatchRemovePlaylistItemEvent } from "@/lib/event";
 
 interface Props {
   open?: boolean;
@@ -75,6 +76,10 @@ const SavePlaylistModal: React.FC<Props> = ({ open, onClose, channel }) => {
     } else {
       toast("Action Success!", {
         description: channel.name + " removed from " + playlist.title,
+      });
+      dispatchRemovePlaylistItemEvent({
+        playlistId: playlist.playlistId,
+        channelId: channel.id,
       });
       setSavedPlaylistId((prev) => [
         ...prev.filter((it) => it !== playlist.playlistId),

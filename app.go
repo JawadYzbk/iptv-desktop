@@ -22,7 +22,7 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
-func (a *App) onDomReady(ctx context.Context) {
+func (a *App) WindowShow() {
 	runtime.WindowShow(a.ctx)
 }
 

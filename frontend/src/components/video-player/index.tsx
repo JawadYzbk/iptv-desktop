@@ -4,6 +4,7 @@ import Player from "video.js/dist/types/player";
 import VideoPlayerControls from "./controls";
 import VideoPlayerProvider from "./provider";
 import { PlayerSource } from "./context";
+import { proxy } from "@/lib/proxy";
 
 interface Props {
   sources: PlayerSource[];
@@ -36,6 +37,13 @@ export const VideoPlayer: React.FC<Props> = ({ sources }) => {
           }
         }
       };
+      if (options.uri) {
+        options.uri = proxy(options.uri);
+      }
+      if (options.url) {
+        options.url = proxy(options.url);
+      }
+      console.log(options);
       return options;
     };
   };

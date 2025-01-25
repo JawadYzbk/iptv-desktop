@@ -12,3 +12,5 @@ export function Minimize():Promise<void>;
 export function Quit():Promise<void>;
 
 export function ToggleMaximize():Promise<void>;
+
+export function WindowShow():Promise<void>;
