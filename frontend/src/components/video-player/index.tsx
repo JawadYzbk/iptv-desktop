@@ -13,6 +13,8 @@ export const VideoPlayer: React.FC<Props> = ({ sources }) => {
   const videoRef = useRef<HTMLDivElement>(null);
   const [player, setPlayer] = useState<Player>();
   const [sourceIndex, setSourceIndex] = useState(0);
+  const [isUserActive, setIsUserActive] = useState(false);
+  const [isMouseOverControl, setIsMouseOverControl] = useState(false);
 
   useEffect(() => {
     setSourceIndex(0);
@@ -43,7 +45,6 @@ export const VideoPlayer: React.FC<Props> = ({ sources }) => {
       if (options.url) {
         options.url = proxy(options.url);
       }
-      console.log(options);
       return options;
     };
   };
@@ -122,8 +123,17 @@ export const VideoPlayer: React.FC<Props> = ({ sources }) => {
     };
   }, [player]);
 
+  const isControlVisible = useMemo(
+    () => isUserActive || isMouseOverControl,
+    [isUserActive, isMouseOverControl]
+  );
+
   return (
-    <div className="relative w-full h-full overflow-hidden">
+    <div
+      className={`relative w-full h-full overflow-hidden ${
+        isControlVisible ? "control-visible" : "control-invisible"
+      }`}
+    >
       <div data-vjs-player className="absolute inset-0">
         <div ref={videoRef} className="absolute inset-0" />
       </div>
@@ -132,6 +142,10 @@ export const VideoPlayer: React.FC<Props> = ({ sources }) => {
         sources={sources}
         sourceIndex={sourceIndex}
         setSourceIndex={setSourceIndex}
+        isUserActive={isUserActive}
+        setIsUserActive={setIsUserActive}
+        isMouseOverControl={isMouseOverControl}
+        setIsMouseOverControl={setIsMouseOverControl}
       >
         <VideoPlayerControls />
       </VideoPlayerProvider>

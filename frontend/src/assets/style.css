@@ -186,5 +186,9 @@
   display: none !important;
 }
 .vjs-text-track-display {
+  margin-bottom: 80px;
+  transition: all;
+}
+.control-visible .vjs-text-track-display {
   margin-bottom: 200px;
 }

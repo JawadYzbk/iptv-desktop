@@ -134,7 +134,8 @@ func (p *Proxy) handleRequest(w http.ResponseWriter, r *http.Request, isWithCach
 		"application/vnd.apple.mpegurl.audio",
 	}
 
-	if slices.Contains(m3u8MimeTypes, resp.Header.Get("Content-Type")) {
+	mime := strings.ToLower(resp.Header.Get("Content-Type"))
+	if slices.Contains(m3u8MimeTypes, mime) {
 		w.Header().Del("Cache-Control")
 		w.Header().Del("Pragma")
 		w.Header().Del("Expires")
@@ -173,7 +174,21 @@ func (p *Proxy) handleM3U8(w http.ResponseWriter, remoteResponse *http.Response)
 	originalUrl := remoteResponse.Request.URL
 
 	for _, line := range lines {
-		if strings.HasPrefix(line, "#") || line == "" || line == "\n" {
+		if strings.HasPrefix(line, "#EXT-X-MEDIA:") {
+			uriIndex := strings.Index(line, "URI=\"")
+			if uriIndex != -1 {
+				start := uriIndex + len("URI=\"")
+				end := strings.Index(line[start:], "\"")
+				if end != -1 {
+					originalURL := line[start : start+end]
+					replacedURL := p.relativeToAbsoluteUrl(originalUrl, originalURL)
+					line = strings.Replace(line, originalURL, replacedURL, 1)
+				}
+			}
+			newLines = append(newLines, line)
+			continue
+
+		} else if strings.HasPrefix(line, "#") || line == "" || line == "\n" {
 			newLines = append(newLines, line)
 			continue
 		}

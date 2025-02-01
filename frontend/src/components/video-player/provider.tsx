@@ -9,6 +9,10 @@ interface Props {
   sources: PlayerSource[];
   sourceIndex: number;
   setSourceIndex: (index: number) => void;
+  isUserActive: boolean;
+  setIsUserActive: React.Dispatch<React.SetStateAction<boolean>>;
+  isMouseOverControl: boolean;
+  setIsMouseOverControl: React.Dispatch<React.SetStateAction<boolean>>;
 }
 export const VOLUME_KEY = "VOLUME";
 export const MUTED_KEY = "MUTED";
@@ -18,10 +22,12 @@ const VideoPlayerProvider: React.FC<Props> = ({
   sources,
   sourceIndex,
   setSourceIndex,
+  isUserActive,
+  setIsUserActive,
+  isMouseOverControl,
+  setIsMouseOverControl,
 }) => {
   const { config } = use(ConfigContext);
-  const [isUserActive, setIsUserActive] = useState(false);
-  const [isMouseOverControl, setIsMouseOverControl] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPIP, setIsPIP] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
