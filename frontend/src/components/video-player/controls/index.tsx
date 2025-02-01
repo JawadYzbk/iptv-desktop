@@ -74,7 +74,7 @@ const VideoPlayerControls: React.FC = () => {
         ref={bottomControlRef}
         className={`absolute ${
           isVisible ? "bottom-0 opacity-100" : "-bottom-40 opacity-0"
-        } transition-all duration-500 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent px-20 py-20 grid grid-cols-[400px_minmax(0,100fr)_400px] z-10`}
+        } transition-all duration-500 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent px-20 py-20 grid grid-cols-[300px_minmax(0,100fr)_300px] xl:grid-cols-[400px_minmax(0,100fr)_400px] z-10`}
       >
         <div></div>
         <div className="flex items-center justify-center gap-4">
