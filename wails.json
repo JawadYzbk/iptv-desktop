@@ -9,5 +9,12 @@
   "author": {
     "name": "Muhammad Hasan Firdaus",
     "email": "hasanfirdaus@protonmail.com"
+  },
+  "info": {
+    "companyName": "IPTV App",
+    "productName": "IPTV Desktop",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright 2025 IPTV App",
+    "comments": "IPTV-ORG Desktop Application"
   }
 }
