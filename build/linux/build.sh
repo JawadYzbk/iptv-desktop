@@ -8,6 +8,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$PROJECT_ROOT" || exit 1
 
+rm -rf build/bin
 rm -rf build/linux/installer
 mkdir build/linux/installer
 
@@ -27,8 +28,14 @@ nfpm package -f ./nfpm.yaml -p rpm -t ./installer
 nfpm package -f ./nfpm.yaml -p deb -t ./installer
 
 cd flatpak
-flatpak install flathub org.gnome.Platform//46 org.gnome.Sdk//46
-flatpak-builder --force-clean --user --repo=repo builddir io.github.iptv_app.iptv_desktop.yaml
-flatpak build-bundle repo ../installer/iptv-desktop_"$VERSION"_"$ARCH".flatpak io.github.iptv_app.iptv_desktop --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
 
-cd "$START_DIR" || exit 1
+use_sudo=""
+if [[ "$1" == "--sudo" ]]; then
+  use_sudo="sudo"
+fi
+
+$use_sudo flatpak install --noninteractive -y flathub org.gnome.Platform//46 org.gnome.Sdk//46
+$use_sudo flatpak-builder -y --force-clean --user --repo=repo builddir io.github.iptv_app.iptv_desktop.yaml
+$use_sudo flatpak build-bundle repo ../installer/iptv-desktop_"$VERSION"_"$ARCH".flatpak io.github.iptv_app.iptv_desktop --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
+
+cd "$START_DIR"
