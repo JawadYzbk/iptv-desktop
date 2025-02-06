@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.iptv_app.iptv_desktop</id>
+  
+  <name>IPTV Desktop</name>
+  <summary>IPTV-ORG Desktop Application</summary>
+  
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  
+  <description>
+    <p>
+      IPTV Desktop is application for playing IPTV from iptv-org playlist. Support listing channel from iptv-org api by Country, Category, and Language.
+    </p>
+  </description>
+  
+  <launchable type="desktop-id">io.github.iptv_app.iptv_desktop.desktop</launchable>
+</component>

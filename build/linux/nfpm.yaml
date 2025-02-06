@@ -1,0 +1,37 @@
+# This is an example nfpm configuration file.
+# Make sure to check the documentation at https://nfpm.goreleaser.com
+#
+# The lines below are called `modelines`. See `:help modeline`
+# Feel free to remove those if you don't want/need to use them.
+# yaml-language-server: $schema=https://nfpm.goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+name: "${NAME}"
+arch: "${GOARCH}"
+platform: "linux"
+version: "${VERSION}"
+section: "video"
+priority: "optional"
+depends:
+  - webkit2gtk4.1
+  - gtk3
+maintainer: "${MAINTAINER}"
+description: "${DESCRIPTION}"
+vendor: "${VENDOR}"
+homepage: "https://github.com/iptv-app/iptv-desktop"
+license: "MIT"
+contents:
+  - src: ../bin/iptv-desktop
+    dst: /usr/bin/iptv-desktop
+  - src: ./iptv-desktop.desktop
+    dst: /usr/share/applications/iptv-desktop.desktop
+  - src: ../appicon.png
+    dst: /usr/share/icons/hicolor/512x512/apps/iptv-desktop.png
+scripts:
+  postinstall: ./scripts/postinstall.sh
+  postremove: ./scripts/postremove.sh
+overrides:
+  deb:
+    depends:
+      - libwebkit2gtk-4.1-0
+      - libgtk-3-0

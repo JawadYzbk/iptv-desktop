@@ -1,0 +1,33 @@
+id: io.github.iptv_app.iptv_desktop
+
+runtime: org.gnome.Platform
+runtime-version: "46"
+sdk: org.gnome.Sdk
+
+command: iptv-desktop
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --share=ipc
+  - --share=network
+  - --socket=pulseaudio
+
+modules:
+  - name: iptv-desktop
+    buildsystem: simple
+    sources:
+      - type: file
+        path: io.github.iptv_app.iptv_desktop.metainfo.xml
+      - type: file
+        path: ../../bin/iptv-desktop
+      - type: file
+        path: ../iptv-desktop.desktop
+      - type: file
+        path: ../../appicon.png
+    build-commands:
+      - install -Dm644 io.github.iptv_app.iptv_desktop.metainfo.xml ${FLATPAK_DEST}/share/metainfo/io.github.iptv_app.iptv_desktop.metainfo.xml
+      - sed -i 's/^Icon=.*/Icon=io.github.iptv_app.iptv_desktop/' iptv-desktop.desktop
+      - install -Dm644 iptv-desktop.desktop ${FLATPAK_DEST}/share/applications/io.github.iptv_app.iptv_desktop.desktop
+      - install -Dm644 appicon.png ${FLATPAK_DEST}/share/icons/hicolor/512x512/apps/io.github.iptv_app.iptv_desktop.png
+      - install -Dm755 iptv-desktop ${FLATPAK_DEST}/bin/iptv-desktop

@@ -2,3 +2,7 @@ build/bin
 node_modules
 frontend/dist
 build/windows/installer/tmp
+build/linux/installer
+build/linux/flatpak/.flatpak-builder
+build/linux/flatpak/repo
+build/linux/flatpak/builddir
