@@ -18,11 +18,13 @@ import './volume-control';
 import './fullscreen-button';
 import './caption-button';
 import './quality-button';
+import './select-button';
 import '../layout/spinner-loading';
 import './player-error';
 import Hls, { ErrorDetails, Events, Level, MediaPlaylist } from 'hls.js';
 import { channelName } from '../../utils/channel';
 import '../layout/app-titlebar';
+import { SelectButtonOption } from './select-button';
 
 @customElement('video-player')
 export class VideoPlayer extends LitElement {
@@ -58,6 +60,9 @@ export class VideoPlayer extends LitElement {
   error?: Error;
 
   @state()
+  _errorReason?: string;
+
+  @state()
   _isPlaying = false;
 
   @state()
@@ -81,15 +86,28 @@ export class VideoPlayer extends LitElement {
   @state()
   _activeQualityIdx: number = -1;
 
+  @state()
+  _activeStreamIdx: number = 0;
+
   private static _video = document.createElement('video');
   private static _caption = document.createElement('div');
   private static _track = VideoPlayer._video.addTextTrack('captions');
+  private _startupTimeout?: NodeJS.Timeout;
+  private _isStreamStarted = false;
+  private _autoTriedStreams = new Set<number>();
+  private _mediaRecoveryAttempt = 0;
+  private _networkRecoveryAttempt = 0;
+  private _stalledCount = 0;
   private _hls = new Hls({
     renderTextTracksNatively: false,
     subtitlePreference: {
       default: false
     },
-    enableCEA708Captions: window.__appConfig?.caption?.isEnableCEA708
+    enableCEA708Captions: window.__appConfig?.caption?.isEnableCEA708,
+    backBufferLength: 30,
+    maxBufferLength: 20,
+    capLevelToPlayerSize: true,
+    startLevel: -1
   });
 
   constructor() {
@@ -99,23 +117,91 @@ export class VideoPlayer extends LitElement {
     this._hls.on(Events.ERROR, (_e, data) => {
       if (data.details === ErrorDetails.BUFFER_STALLED_ERROR) {
         this._isBuffering = true;
+        this._stalledCount += 1;
+        this._downshiftQuality();
+        if (this._stalledCount >= 3 && this._streamList.length > 1) {
+          if (!this._tryNextStream()) {
+            this._setPlaybackError('Stream stalled repeatedly and no other URL is available.');
+          }
+        }
       } else {
         this._isBuffering = false;
-        this.error = data.error;
       }
+
+      if (!data.fatal) return;
+
+      const details = `${data.details || ''}`.toLowerCase();
+      const isCodecIssue = details.includes('codec');
+
+      if (data.type === 'networkError') {
+        if (this._networkRecoveryAttempt === 0) {
+          this._networkRecoveryAttempt += 1;
+          this._hls.startLoad();
+          this.error = data.error;
+          this._errorReason = 'Network issue detected. Retrying current stream...';
+          return;
+        }
+        if (!this._tryNextStream()) {
+          this._setPlaybackError(
+            'Network error while loading stream. Check connection or retry.',
+            data.error
+          );
+        }
+        return;
+      }
+
+      if (isCodecIssue) {
+        if (!this._tryNextStream()) {
+          this._setPlaybackError(
+            'Unsupported codec for current device. Try retry or another stream.',
+            data.error
+          );
+        }
+        return;
+      }
+
+      if (data.type === 'mediaError') {
+        if (this._mediaRecoveryAttempt === 0) {
+          this._mediaRecoveryAttempt += 1;
+          this._hls.recoverMediaError();
+          this.error = undefined;
+          return;
+        }
+        if (this._mediaRecoveryAttempt === 1) {
+          this._mediaRecoveryAttempt += 1;
+          this._hls.swapAudioCodec();
+          this._hls.recoverMediaError();
+          this.error = undefined;
+          return;
+        }
+        if (!this._tryNextStream()) {
+          this._setPlaybackError(
+            'Decoder failed to recover from media error. Try retry or fallback stream.',
+            data.error
+          );
+        }
+        return;
+      }
+
+      this._setPlaybackError('Stream playback failed. Try retry or fallback stream.', data.error);
     });
     this._hls.on(Events.FRAG_BUFFERED, () => {
+      this._isStreamStarted = true;
+      this._clearStartupTimeout();
       this.error = undefined;
+      this._errorReason = undefined;
       this._isBuffering = false;
     });
 
     this._hls.on(Events.MANIFEST_PARSED, (_e, data) => {
       this._qualityList = data.levels;
       this._captionList = data.subtitleTracks;
+      this._applyDecoderSafeCap();
     });
 
     this._hls.on(Events.LEVELS_UPDATED, (_e, data) => {
       this._qualityList = data.levels;
+      this._applyDecoderSafeCap();
     });
 
     this._hls.on(Events.SUBTITLE_TRACKS_UPDATED, (_e, data) => {
@@ -179,8 +265,21 @@ export class VideoPlayer extends LitElement {
       VideoPlayer._video.muted = localStorage.getItem('isMuted') === '1' ? true : false;
     }
     VideoPlayer._video.onplay = () => (this._isPlaying = true);
+    VideoPlayer._video.onplaying = () => {
+      this._isPlaying = true;
+      this._isStreamStarted = true;
+      this._clearStartupTimeout();
+      this.error = undefined;
+      this._errorReason = undefined;
+    };
     VideoPlayer._video.onpause = () => (this._isPlaying = false);
-    VideoPlayer._video.onended = () => (this._isPlaying = false);
+    VideoPlayer._video.onended = () => {
+      this._isPlaying = false;
+      this._isStreamStarted = false;
+      if (this._streamList.length > 1 && !this._rotateToNextStream()) {
+        this._setPlaybackError('Current stream stopped and no other URL is available.');
+      }
+    };
     VideoPlayer._video.onleavepictureinpicture = this._updatePip;
     VideoPlayer._video.onenterpictureinpicture = this._updatePip;
 
@@ -199,6 +298,7 @@ export class VideoPlayer extends LitElement {
     window.removeEventListener('keydown', this._handleGlobalShortcut);
 
     VideoPlayer._caption.innerHTML = '';
+    this._clearStartupTimeout();
     this._hls?.destroy();
 
     navigator.mediaSession.setActionHandler('previoustrack', null);
@@ -213,7 +313,8 @@ export class VideoPlayer extends LitElement {
       const channel = await window.api.getSingleChannelWithStream(channelId);
       this._data = channel;
       this._streamList = channel.streams;
-      this._loadStream(0);
+      this._activeStreamIdx = 0;
+      this._startStreamSequence(0);
       navigator.mediaSession.metadata = new MediaMetadata({
         title: channelName(channel),
         artist: channel.network || channel.owners.join(', ') || 'IPTV Desktop',
@@ -238,6 +339,15 @@ export class VideoPlayer extends LitElement {
   private _loadStream = (index: number) => {
     const stream = this._streamList?.[index];
     if (!stream) return;
+    this._activeStreamIdx = index;
+    this._autoTriedStreams.add(index);
+    this._isStreamStarted = false;
+    this._clearStartupTimeout();
+    this._mediaRecoveryAttempt = 0;
+    this._networkRecoveryAttempt = 0;
+    this._stalledCount = 0;
+    this._activeQualityIdx = -1;
+    this._qualityList = [];
 
     VideoPlayer._caption.innerHTML = '';
 
@@ -251,8 +361,88 @@ export class VideoPlayer extends LitElement {
       }
     };
     this.error = undefined;
+    this._errorReason = undefined;
     this._isBuffering = true;
     this._hls.loadSource(videoSrc);
+    this._startupTimeout = setTimeout(() => {
+      if (this._isStreamStarted) return;
+      if (!this._tryNextStream()) {
+        this._setPlaybackError('Stream did not start. All available URLs were tried.');
+      }
+    }, 12000);
+  };
+
+  private _startStreamSequence = (index: number) => {
+    this._autoTriedStreams.clear();
+    this._loadStream(index);
+  };
+
+  private _clearStartupTimeout = () => {
+    if (this._startupTimeout) {
+      clearTimeout(this._startupTimeout);
+      this._startupTimeout = undefined;
+    }
+  };
+
+  private _setPlaybackError = (reason: string, error?: Error) => {
+    this._clearStartupTimeout();
+    this._isStreamStarted = false;
+    this._errorReason = reason;
+    this.error = error || new Error(reason);
+    this._isBuffering = false;
+  };
+
+  private _tryNextStream = () => {
+    if (this._streamList.length <= 1) return false;
+    for (let offset = 1; offset <= this._streamList.length; offset++) {
+      const nextIdx = (this._activeStreamIdx + offset) % this._streamList.length;
+      if (!this._autoTriedStreams.has(nextIdx)) {
+        this._loadStream(nextIdx);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  private _rotateToNextStream = () => {
+    if (this._streamList.length <= 1) return false;
+    const nextIdx = (this._activeStreamIdx + 1) % this._streamList.length;
+    this._startStreamSequence(nextIdx);
+    return true;
+  };
+
+  private _retryPlayback = () => {
+    if (!this._streamList.length) return;
+    this._startStreamSequence(this._activeStreamIdx);
+  };
+
+  private _fallbackPlayback = () => {
+    if (!this._tryNextStream()) {
+      this._setPlaybackError('No fallback stream available.');
+    }
+  };
+
+  private _streamLabel = (stream: IPTVStream, index: number) => {
+    try {
+      const parsed = new URL(stream.url);
+      return `${index + 1}. ${parsed.hostname}`;
+    } catch {
+      return `${index + 1}. ${stream.url}`;
+    }
+  };
+
+  private _streamOptions = () => {
+    return this._streamList.map<SelectButtonOption>((stream, index) => ({
+      label: this._streamLabel(stream, index),
+      value: index
+    }));
+  };
+
+  private _onChangeStream = (e: CustomEvent) => {
+    const nextIdx = Number(e.detail);
+    if (!Number.isNaN(nextIdx) && nextIdx !== this._activeStreamIdx) {
+      this._startStreamSequence(nextIdx);
+    }
   };
 
   private _handlePlay = () => {
@@ -299,7 +489,32 @@ export class VideoPlayer extends LitElement {
 
   private _changeQuality = (idx: number) => {
     this._activeQualityIdx = idx;
+    this._stalledCount = 0;
     this._hls.currentLevel = idx;
+  };
+
+  private _applyDecoderSafeCap = () => {
+    if (!this._qualityList.length) return;
+    const cpuCount = navigator.hardwareConcurrency || 4;
+    const maxHeight = cpuCount <= 4 ? 720 : cpuCount <= 8 ? 1080 : 2160;
+    const maxBitrate = cpuCount <= 4 ? 3000000 : cpuCount <= 8 ? 7000000 : Number.MAX_SAFE_INTEGER;
+    let safeLevel = -1;
+    this._qualityList.forEach((level, idx) => {
+      const height = level.height || 0;
+      const bitrate = level.bitrate || 0;
+      if (height <= maxHeight && bitrate <= maxBitrate) {
+        safeLevel = idx;
+      }
+    });
+    this._hls.autoLevelCapping = safeLevel;
+  };
+
+  private _downshiftQuality = () => {
+    if (this._activeQualityIdx !== -1 || this._stalledCount < 2) return;
+    const currentAutoLevel = this._hls.nextAutoLevel;
+    if (currentAutoLevel > 0) {
+      this._hls.nextLevel = currentAutoLevel - 1;
+    }
   };
 
   private _isTypingTarget = (event: KeyboardEvent) => {
@@ -424,6 +639,31 @@ export class VideoPlayer extends LitElement {
       bottom: 0;
       display: block;
     }
+    .top-right-control {
+      position: absolute;
+      top: calc(env(titlebar-area-height, 30px) + 10px);
+      right: 20px;
+      z-index: 4;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .top-right-control .stream-label {
+      max-width: 360px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      font-size: 0.9rem;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background-color: ${THEME.BG_COLOR_TRANS};
+      border: 1px solid ${THEME.BORDER_COLOR};
+    }
+    .visible .top-right-control {
+      opacity: 1;
+    }
     #control-container:not(.visible) {
       cursor: none;
     }
@@ -513,12 +753,33 @@ export class VideoPlayer extends LitElement {
         ${VideoPlayer._video}
         <player-error
           .details=${this.error}
+          .reason=${this._errorReason}
+          .canFallback=${this._activeStreamIdx + 1 < this._streamList.length}
+          .streamIndex=${this._activeStreamIdx}
+          .streamCount=${this._streamList.length}
+          @retry=${this._retryPlayback}
+          @fallback=${this._fallbackPlayback}
           class=${this.error === undefined ? 'hidden' : undefined}
         ></player-error>
         <spinner-loading class="${this._isBuffering ? 'show' : 'hidden'}"></spinner-loading>
         <div class="captions"><div>${VideoPlayer._caption}</div></div>
       </div>
       <div id="control-container" class="${_visibleClass}">
+        <div class="top-right-control">
+          <div class="stream-label">
+            ${this._streamList[this._activeStreamIdx]
+              ? this._streamLabel(this._streamList[this._activeStreamIdx], this._activeStreamIdx)
+              : 'No stream'}
+          </div>
+          <select-button
+            class="${this._streamList.length <= 1 ? 'hidden' : ''}"
+            .options=${this._streamOptions()}
+            .value=${this._activeStreamIdx}
+            placement="bottom"
+            @change=${this._onChangeStream}
+            >URL</select-button
+          >
+        </div>
         <aside>
           <channel-list
             class="vertical with-titlebar"
