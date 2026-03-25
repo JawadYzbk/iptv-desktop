@@ -22,5 +22,4 @@ export type API = {
   toggleFavorite: (channelId: string) => Promise<boolean>;
   getFavorites: () => Promise<string[]>;
   resolveChannelLogo: (channelId: string, failedLogo?: string) => Promise<string | undefined>;
-  openStreamInVlc: (streamUrl: string) => Promise<boolean>;
 };

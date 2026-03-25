@@ -12,8 +12,6 @@ import { clearAllCache } from './cache';
 import config, { defaultAppConifg } from './config';
 import { AppConfig } from '../preload/config.type';
 import { setupDOH } from './network';
-import { spawn } from 'child_process';
-import { existsSync } from 'fs';
 
 export class IPCHandler {
   private _mainWindow?: BrowserWindow;
@@ -60,7 +58,6 @@ export class IPCHandler {
     ipcMain.handle('resolveChannelLogo', (_e, channelId: string, failedLogo?: string) =>
       resolveChannelLogo(channelId, failedLogo)
     );
-    ipcMain.handle('openStreamInVlc', (_e, streamUrl: string) => this._openStreamInVlc(streamUrl));
 
     ipcMain.handle('clearAllCache', () => {
       this._needMainWindow();
@@ -105,35 +102,5 @@ export class IPCHandler {
     if (this._createMainWindow === undefined) {
       throw new Error('Create window not defined!');
     }
-  }
-
-  private _openStreamInVlc(streamUrl: string) {
-    const trySpawn = (command: string, args: string[]) => {
-      try {
-        const proc = spawn(command, args, { detached: true, stdio: 'ignore' });
-        proc.unref();
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
-    if (process.platform === 'win32') {
-      const paths = [
-        'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe',
-        'C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe'
-      ];
-      for (const path of paths) {
-        if (existsSync(path) && trySpawn(path, [streamUrl])) {
-          return true;
-        }
-      }
-    }
-
-    if (trySpawn('vlc', [streamUrl])) {
-      return true;
-    }
-
-    return false;
   }
 }

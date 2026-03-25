@@ -93,11 +93,9 @@ export class VideoPlayer extends LitElement {
   private static _caption = document.createElement('div');
   private static _track = VideoPlayer._video.addTextTrack('captions');
   private static _streamPrefStorageKey = 'streamPrefByChannel';
-  private _isHlsAttached = false;
   private _startupTimeout?: NodeJS.Timeout;
   private _isStreamStarted = false;
   private _autoTriedStreams = new Set<number>();
-  private _triedNativeFallbackForCurrent = false;
   private _mediaRecoveryAttempt = 0;
   private _networkRecoveryAttempt = 0;
   private _stalledCount = 0;
@@ -116,7 +114,7 @@ export class VideoPlayer extends LitElement {
   constructor() {
     super();
     VideoPlayer._video.autoplay = true;
-    this._attachHlsMedia();
+    this._hls.attachMedia(VideoPlayer._video);
     this._hls.on(Events.ERROR, (_e, data) => {
       if (data.details === ErrorDetails.BUFFER_STALLED_ERROR) {
         this._isBuffering = true;
@@ -346,7 +344,6 @@ export class VideoPlayer extends LitElement {
     if (!stream) return;
     this._activeStreamIdx = index;
     this._autoTriedStreams.add(index);
-    this._triedNativeFallbackForCurrent = false;
     this._isStreamStarted = false;
     this._clearStartupTimeout();
     this._mediaRecoveryAttempt = 0;
@@ -358,25 +355,20 @@ export class VideoPlayer extends LitElement {
     VideoPlayer._caption.innerHTML = '';
 
     var videoSrc = stream.url;
+    this._hls.config.xhrSetup = (xhr, _url) => {
+      if (stream.http_referrer) {
+        xhr.setRequestHeader('X-Custom-Referer', stream.http_referrer);
+      }
+      if (stream.user_agent) {
+        xhr.setRequestHeader('X-Custom-User-Agent', stream.user_agent);
+      }
+    };
     this.error = undefined;
     this._errorReason = undefined;
     this._isBuffering = true;
-    const isM3U8 = this._isM3U8Stream(videoSrc);
-    const canPlayNativeHls = VideoPlayer._video.canPlayType('application/vnd.apple.mpegurl') !== '';
-    if (isM3U8) {
-      if (Hls.isSupported()) {
-        this._playWithHls(stream);
-      } else if (canPlayNativeHls) {
-        this._playWithNative(stream);
-      } else if (!this._tryNextStream()) {
-        this._setPlaybackError('M3U8 stream is not supported by this device.');
-      }
-    } else {
-      this._playWithNative(stream);
-    }
+    this._hls.loadSource(videoSrc);
     this._startupTimeout = setTimeout(() => {
       if (this._isStreamStarted) return;
-      if (this._tryNativeFallbackCurrentStream()) return;
       if (!this._tryNextStream()) {
         this._setPlaybackError('Stream did not start. All available URLs were tried.');
       }
@@ -422,62 +414,7 @@ export class VideoPlayer extends LitElement {
     }
   };
 
-  private _attachHlsMedia = () => {
-    if (this._isHlsAttached) return;
-    this._hls.attachMedia(VideoPlayer._video);
-    this._isHlsAttached = true;
-  };
-
-  private _detachHlsMedia = () => {
-    if (!this._isHlsAttached) return;
-    this._hls.stopLoad();
-    this._hls.detachMedia();
-    this._isHlsAttached = false;
-  };
-
-  private _isM3U8Stream = (url: string) => {
-    const raw = url.toLowerCase();
-    return raw.includes('.m3u8') || raw.includes('application/vnd.apple.mpegurl');
-  };
-
-  private _playWithHls = (stream: IPTVStream) => {
-    this._attachHlsMedia();
-    this._hls.config.xhrSetup = (xhr, _url) => {
-      if (stream.http_referrer) {
-        xhr.setRequestHeader('X-Custom-Referer', stream.http_referrer);
-      }
-      if (stream.user_agent) {
-        xhr.setRequestHeader('X-Custom-User-Agent', stream.user_agent);
-      }
-    };
-    this._hls.loadSource(stream.url);
-  };
-
-  private _playWithNative = (stream: IPTVStream) => {
-    this._detachHlsMedia();
-    VideoPlayer._video.pause();
-    VideoPlayer._video.removeAttribute('src');
-    VideoPlayer._video.src = stream.url;
-    VideoPlayer._video.load();
-    void VideoPlayer._video.play().catch(() => {
-      this._setPlaybackError('Unable to start native stream playback.');
-    });
-  };
-
-  private _tryNativeFallbackCurrentStream = () => {
-    const stream = this._streamList?.[this._activeStreamIdx];
-    if (!stream) return false;
-    if (this._triedNativeFallbackForCurrent) return false;
-    if (!this._isM3U8Stream(stream.url)) return false;
-    this._triedNativeFallbackForCurrent = true;
-    this._playWithNative(stream);
-    return true;
-  };
-
   private _setPlaybackError = (reason: string, error?: Error) => {
-    if (this._tryNativeFallbackCurrentStream()) {
-      return;
-    }
     if (this._tryNextStream()) {
       return;
     }
@@ -486,10 +423,6 @@ export class VideoPlayer extends LitElement {
     this._errorReason = reason;
     this.error = error || new Error(reason);
     this._isBuffering = false;
-    const currentStream = this._streamList[this._activeStreamIdx];
-    if (currentStream?.url) {
-      void window.api.openStreamInVlc(currentStream.url);
-    }
   };
 
   private _tryNextStream = () => {
