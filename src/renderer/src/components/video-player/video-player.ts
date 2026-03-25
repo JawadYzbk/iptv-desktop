@@ -49,9 +49,6 @@ export class VideoPlayer extends LitElement {
   _streamList: IPTVStream[] = [];
 
   @state()
-  _isMouseOverControl = false;
-
-  @state()
   _isControlVisible = true;
 
   @state()
@@ -164,12 +161,15 @@ export class VideoPlayer extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-    this.onmousemove = this._detectControlAndIdle;
-    this.onmousedown = this._detectControlAndIdle;
-    this.ontouchstart = this._detectControlAndIdle;
-    this.onclick = this._detectControlAndIdle;
-    this.onkeydown = this._detectControlAndIdle;
-    this._detectControlAndIdle();
+    this.onmousemove = this._showControlAndResetIdle;
+    this.onmousedown = this._showControlAndResetIdle;
+    this.ontouchstart = this._showControlAndResetIdle;
+    this.onclick = this._showControlAndResetIdle;
+    this.onkeydown = this._showControlAndResetIdle;
+    this.onwheel = this._showControlAndResetIdle;
+    window.addEventListener('blur', this._hideControl);
+    window.addEventListener('focus', this._showControlAndResetIdle);
+    this._showControlAndResetIdle();
 
     if (localStorage.getItem('volume')) {
       VideoPlayer._video.volume = Number(localStorage.getItem('volume'));
@@ -192,6 +192,9 @@ export class VideoPlayer extends LitElement {
   }
 
   disconnectedCallback(): void {
+    window.removeEventListener('blur', this._hideControl);
+    window.removeEventListener('focus', this._showControlAndResetIdle);
+
     VideoPlayer._caption.innerHTML = '';
     this._hls?.destroy();
 
@@ -291,7 +294,12 @@ export class VideoPlayer extends LitElement {
   };
 
   private _idleTimeout?: NodeJS.Timeout;
-  private _resetIdleTimeout = () => {
+
+  private _hideControl = () => {
+    this._isControlVisible = false;
+  };
+
+  private _showControlAndResetIdle = () => {
     if (!this._isControlVisible) {
       this._isControlVisible = true;
     }
@@ -301,17 +309,6 @@ export class VideoPlayer extends LitElement {
     this._idleTimeout = setTimeout(() => {
       this._isControlVisible = false;
     }, 3000);
-  };
-
-  private _detectControlAndIdle = () => {
-    this._resetIdleTimeout();
-    const ctrl = this.shadowRoot!.querySelector('footer');
-    const sidebar = this.shadowRoot!.querySelector('aside');
-    if (ctrl?.matches(':hover') || sidebar?.matches(':hover')) {
-      this._isMouseOverControl = true;
-    } else {
-      this._isMouseOverControl = false;
-    }
   };
 
   static styles = css`
@@ -436,7 +433,7 @@ export class VideoPlayer extends LitElement {
   `;
 
   protected render(): unknown {
-    const _visibleClass = this._isControlVisible || this._isMouseOverControl ? 'visible' : '';
+    const _visibleClass = this._isControlVisible ? 'visible' : '';
 
     return html`<div id="video-container">
         <app-titlebar class="fixed no-border"></app-titlebar>
