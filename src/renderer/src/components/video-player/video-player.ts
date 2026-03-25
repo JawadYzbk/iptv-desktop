@@ -169,6 +169,7 @@ export class VideoPlayer extends LitElement {
     this.onwheel = this._showControlAndResetIdle;
     window.addEventListener('blur', this._hideControl);
     window.addEventListener('focus', this._showControlAndResetIdle);
+    window.addEventListener('keydown', this._handleGlobalShortcut);
     this._showControlAndResetIdle();
 
     if (localStorage.getItem('volume')) {
@@ -192,14 +193,19 @@ export class VideoPlayer extends LitElement {
   }
 
   disconnectedCallback(): void {
+    super.disconnectedCallback();
     window.removeEventListener('blur', this._hideControl);
     window.removeEventListener('focus', this._showControlAndResetIdle);
+    window.removeEventListener('keydown', this._handleGlobalShortcut);
 
     VideoPlayer._caption.innerHTML = '';
     this._hls?.destroy();
 
     navigator.mediaSession.setActionHandler('previoustrack', null);
     navigator.mediaSession.setActionHandler('nexttrack', null);
+    navigator.mediaSession.setActionHandler('play', null);
+    navigator.mediaSession.setActionHandler('pause', null);
+    navigator.mediaSession.setActionHandler('stop', null);
   }
 
   private _loadData = async (channelId: string) => {
@@ -223,6 +229,9 @@ export class VideoPlayer extends LitElement {
       navigator.mediaSession.setActionHandler('nexttrack', () =>
         dispatchEvent(ECustomEvent.nextChannel)
       );
+      navigator.mediaSession.setActionHandler('play', () => VideoPlayer._video.play());
+      navigator.mediaSession.setActionHandler('pause', () => VideoPlayer._video.pause());
+      navigator.mediaSession.setActionHandler('stop', () => VideoPlayer._video.pause());
     }
   };
 
@@ -291,6 +300,70 @@ export class VideoPlayer extends LitElement {
   private _changeQuality = (idx: number) => {
     this._activeQualityIdx = idx;
     this._hls.currentLevel = idx;
+  };
+
+  private _isTypingTarget = (event: KeyboardEvent) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return false;
+    if (target.isContentEditable) return true;
+    const tagName = target.tagName.toLowerCase();
+    if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') return true;
+    if (target.closest('text-input') || target.closest('search-input') || target.closest('select-item')) {
+      return true;
+    }
+    return false;
+  };
+
+  private _toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+    }
+  };
+
+  private _handleGlobalShortcut = async (event: KeyboardEvent) => {
+    if (event.defaultPrevented || this._isTypingTarget(event)) return;
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+    if (event.repeat) return;
+
+    switch (event.code) {
+      case 'ArrowUp':
+      case 'PageUp':
+      case 'MediaTrackPrevious':
+      case 'BrowserBack':
+      case 'Backspace':
+      case 'KeyJ':
+        event.preventDefault();
+        dispatchEvent(ECustomEvent.prevChannel);
+        break;
+
+      case 'ArrowDown':
+      case 'PageDown':
+      case 'MediaTrackNext':
+      case 'KeyN':
+      case 'KeyL':
+        event.preventDefault();
+        dispatchEvent(ECustomEvent.nextChannel);
+        break;
+
+      case 'Space':
+      case 'MediaPlayPause':
+      case 'KeyK':
+        event.preventDefault();
+        this._handlePlay();
+        break;
+
+      case 'KeyF':
+        event.preventDefault();
+        await this._toggleFullscreen();
+        break;
+
+      case 'KeyM':
+        event.preventDefault();
+        this._toggleMuted();
+        break;
+    }
   };
 
   private _idleTimeout?: NodeJS.Timeout;

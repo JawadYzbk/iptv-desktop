@@ -21,4 +21,5 @@ export type API = {
   setAppConfig: (newCfg: AppConfig['app'], relaunchHash: string) => void;
   toggleFavorite: (channelId: string) => Promise<boolean>;
   getFavorites: () => Promise<string[]>;
+  resolveChannelLogo: (channelId: string, failedLogo?: string) => Promise<string | undefined>;
 };

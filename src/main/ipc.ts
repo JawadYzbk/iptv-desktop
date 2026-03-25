@@ -4,6 +4,7 @@ import {
   getAllCountry,
   getAllLanguage,
   getFilteredActiveChannel,
+  resolveChannelLogo,
   getSingleChannelWithStream
 } from './iptv';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
@@ -54,6 +55,9 @@ export class IPCHandler {
       config.write();
       return config.data.favorites.includes(channelId);
     });
+    ipcMain.handle('resolveChannelLogo', (_e, channelId: string, failedLogo?: string) =>
+      resolveChannelLogo(channelId, failedLogo)
+    );
 
     ipcMain.handle('clearAllCache', () => {
       this._needMainWindow();

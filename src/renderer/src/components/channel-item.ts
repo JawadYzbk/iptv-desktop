@@ -1,5 +1,5 @@
 import { css, html, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { THEME } from '../assets/theme';
 import LogoPlaceholder from '../assets/logo-placeholder.png?url';
 import { Heart } from 'lucide-static';
@@ -34,6 +34,12 @@ export class ChannelItem extends LitElement {
   @property({ type: Boolean })
   isFavorite: boolean = false;
 
+  @state()
+  private _logoSrc: string = LogoPlaceholder;
+
+  @state()
+  private _isResolvingLogo = false;
+
   private _toggleFavorite = async (e: Event) => {
     e.stopPropagation();
     if (this.channelId) {
@@ -41,6 +47,35 @@ export class ChannelItem extends LitElement {
       this.isFavorite = newVal;
       this.dispatchEvent(new CustomEvent('favorite-toggled', { bubbles: true, composed: true, detail: { channelId: this.channelId, isFavorite: newVal } }));
     }
+  };
+
+  protected updated(changedProperties: Map<string, unknown>): void {
+    if (changedProperties.has('logo') || changedProperties.has('channelId')) {
+      this._logoSrc = this.logo || LogoPlaceholder;
+      void this._resolveLogo();
+    }
+  }
+
+  private _resolveLogo = async (failedLogo?: string) => {
+    if (!this.channelId || this._isResolvingLogo) return;
+    this._isResolvingLogo = true;
+    try {
+      const resolved = await window.api.resolveChannelLogo(this.channelId, failedLogo);
+      if (resolved && resolved !== this._logoSrc) {
+        this._logoSrc = resolved;
+      }
+    } finally {
+      this._isResolvingLogo = false;
+    }
+  };
+
+  private _onImageError = async () => {
+    if (this._logoSrc !== LogoPlaceholder) {
+      const failedLogo = this._logoSrc;
+      await this._resolveLogo(failedLogo);
+      if (this._logoSrc !== failedLogo) return;
+    }
+    this._logoSrc = LogoPlaceholder;
   };
 
   static styles = css`
@@ -142,7 +177,7 @@ export class ChannelItem extends LitElement {
         <div class="favorite-btn ${this.isFavorite ? 'active' : ''}" @click="${this._toggleFavorite}">
           ${unsafeHTML(Heart)}
         </div>
-        <img loading="lazy" onerror="this.src='${LogoPlaceholder}'" src="${this.logo}" alt="" />
+        <img loading="lazy" @error=${this._onImageError} src="${this._logoSrc}" alt="" />
       </div>
       <h3>${this.name}</h3>
     `;
