@@ -5,6 +5,7 @@ export type AppConfig = {
     filter: FILTER_TYPE;
     code?: string;
   };
+  favorites?: string[];
   app?: {
     iptv?: {
       isOverrideApi?: boolean;

@@ -19,4 +19,6 @@ export type API = {
   clearAllCache: () => void;
   getAppConfig: () => Promise<AppConfig['app']>;
   setAppConfig: (newCfg: AppConfig['app'], relaunchHash: string) => void;
+  toggleFavorite: (channelId: string) => Promise<boolean>;
+  getFavorites: () => Promise<string[]>;
 };

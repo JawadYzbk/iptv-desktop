@@ -42,6 +42,18 @@ export class IPCHandler {
     ipcMain.handle('getAppConfig', () =>
       config.chain.get('app').defaultsDeep(defaultAppConifg).value()
     );
+    ipcMain.handle('getFavorites', () => config.data.favorites || []);
+    ipcMain.handle('toggleFavorite', (_e, channelId: string) => {
+      config.data.favorites = config.data.favorites || [];
+      const idx = config.data.favorites.indexOf(channelId);
+      if (idx > -1) {
+        config.data.favorites.splice(idx, 1);
+      } else {
+        config.data.favorites.push(channelId);
+      }
+      config.write();
+      return config.data.favorites.includes(channelId);
+    });
 
     ipcMain.handle('clearAllCache', () => {
       this._needMainWindow();

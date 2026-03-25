@@ -29,6 +29,7 @@ const initialValue: AppConfig = {
   iptvView: {
     filter: 'country'
   },
+  favorites: [],
   app: undefined
 };
 class LowWithLodash<T> extends LowSync<T> {

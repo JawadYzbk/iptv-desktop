@@ -36,13 +36,20 @@ export class ChannelList extends LitElement {
   @state()
   _searchDebounced: string = '';
 
+  @state()
+  _favorites: string[] = [];
+
   private _channelList = new Task(this, {
     task: async ([filter, code]) => {
       this._search = '';
       this._searchDebounced = '';
       if (!filter || !code) return [];
 
-      const result = await window.api.getFilteredActiveChannel(filter as FILTER_TYPE, code);
+      const [result, favs] = await Promise.all([
+        window.api.getFilteredActiveChannel(filter as FILTER_TYPE, code),
+        window.api.getFavorites()
+      ]);
+      this._favorites = favs;
       return result;
     },
     args: () => [this.filter, this.code]
@@ -231,6 +238,18 @@ export class ChannelList extends LitElement {
                     ? 'active'
                     : ''}"
                   @click="${() => this._onClickChannel(channel.id)}"
+                  ?isFavorite="${this._favorites.includes(channel.id)}"
+                  @favorite-toggled="${(e: CustomEvent) => {
+                    const { channelId, isFavorite } = e.detail;
+                    if (isFavorite) {
+                      this._favorites = [...this._favorites, channelId];
+                    } else {
+                      this._favorites = this._favorites.filter(id => id !== channelId);
+                      if (this.filter === 'favorites') {
+                        this._channelList.run([this.filter, this.code]);
+                      }
+                    }
+                  }}"
                   .logo="${channel.logo}"
                   .name="${channelName(channel)}"
                 ></channel-item>`;

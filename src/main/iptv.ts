@@ -85,6 +85,11 @@ export const getFilteredActiveChannel = async (type: FILTER_TYPE, code: string) 
       filterFn = (item: IPTVChannel) => item.languages.includes(code);
       break;
 
+    case 'favorites':
+      const favorites = config.data.favorites || [];
+      filterFn = (item: IPTVChannel) => favorites.includes(item.id);
+      break;
+
     default:
       return [];
   }
