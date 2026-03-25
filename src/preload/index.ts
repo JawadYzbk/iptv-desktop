@@ -17,7 +17,8 @@ const api: API = {
   toggleFavorite: (channelId) => ipcRenderer.invoke('toggleFavorite', channelId),
   getFavorites: () => ipcRenderer.invoke('getFavorites'),
   resolveChannelLogo: (channelId, failedLogo) =>
-    ipcRenderer.invoke('resolveChannelLogo', channelId, failedLogo)
+    ipcRenderer.invoke('resolveChannelLogo', channelId, failedLogo),
+  openStreamInVlc: (streamUrl) => ipcRenderer.invoke('openStreamInVlc', streamUrl)
 };
 
 if (process.contextIsolated) {
