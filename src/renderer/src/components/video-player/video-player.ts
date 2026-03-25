@@ -92,6 +92,7 @@ export class VideoPlayer extends LitElement {
   private static _video = document.createElement('video');
   private static _caption = document.createElement('div');
   private static _track = VideoPlayer._video.addTextTrack('captions');
+  private static _streamPrefStorageKey = 'streamPrefByChannel';
   private _startupTimeout?: NodeJS.Timeout;
   private _isStreamStarted = false;
   private _autoTriedStreams = new Set<number>();
@@ -271,6 +272,7 @@ export class VideoPlayer extends LitElement {
       this._clearStartupTimeout();
       this.error = undefined;
       this._errorReason = undefined;
+      this._saveCurrentStreamPreference();
     };
     VideoPlayer._video.onpause = () => (this._isPlaying = false);
     VideoPlayer._video.onended = () => {
@@ -313,8 +315,9 @@ export class VideoPlayer extends LitElement {
       const channel = await window.api.getSingleChannelWithStream(channelId);
       this._data = channel;
       this._streamList = channel.streams;
-      this._activeStreamIdx = 0;
-      this._startStreamSequence(0);
+      const preferredIdx = this._getPreferredStreamIndex(channelId, channel.streams);
+      this._activeStreamIdx = preferredIdx;
+      this._startStreamSequence(preferredIdx);
       navigator.mediaSession.metadata = new MediaMetadata({
         title: channelName(channel),
         artist: channel.network || channel.owners.join(', ') || 'IPTV Desktop',
@@ -372,6 +375,33 @@ export class VideoPlayer extends LitElement {
     }, 12000);
   };
 
+  private _getPreferredStreamIndex = (channelId: string, streams: IPTVStream[]) => {
+    if (streams.length === 0) return 0;
+    try {
+      const raw = localStorage.getItem(VideoPlayer._streamPrefStorageKey);
+      if (!raw) return 0;
+      const pref = JSON.parse(raw) as Record<string, string>;
+      const preferredUrl = pref[channelId];
+      if (!preferredUrl) return 0;
+      const idx = streams.findIndex((item) => item.url === preferredUrl);
+      return idx > -1 ? idx : 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  private _saveCurrentStreamPreference = () => {
+    if (!this._channelId) return;
+    const currentStream = this._streamList[this._activeStreamIdx];
+    if (!currentStream?.url) return;
+    try {
+      const raw = localStorage.getItem(VideoPlayer._streamPrefStorageKey);
+      const pref = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+      pref[this._channelId] = currentStream.url;
+      localStorage.setItem(VideoPlayer._streamPrefStorageKey, JSON.stringify(pref));
+    } catch {}
+  };
+
   private _startStreamSequence = (index: number) => {
     this._autoTriedStreams.clear();
     this._loadStream(index);
@@ -385,6 +415,9 @@ export class VideoPlayer extends LitElement {
   };
 
   private _setPlaybackError = (reason: string, error?: Error) => {
+    if (this._tryNextStream()) {
+      return;
+    }
     this._clearStartupTimeout();
     this._isStreamStarted = false;
     this._errorReason = reason;
