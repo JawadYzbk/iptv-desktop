@@ -24,5 +24,9 @@ export type AppConfig = {
     userInterface?: {
       isUseSystemTitlebar?: boolean;
     };
+    timeshift?: {
+      isEnabled?: boolean;
+      bufferMinutes?: number;
+    };
   };
 };

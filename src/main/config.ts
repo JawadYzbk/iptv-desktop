@@ -22,6 +22,10 @@ export const defaultAppConifg: AppConfig['app'] = {
   },
   userInterface: {
     isUseSystemTitlebar: process.platform === 'linux' ? true : false
+  },
+  timeshift: {
+    isEnabled: false,
+    bufferMinutes: 30
   }
 };
 

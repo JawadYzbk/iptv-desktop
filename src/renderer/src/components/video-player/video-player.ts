@@ -89,6 +89,15 @@ export class VideoPlayer extends LitElement {
   @state()
   _activeStreamIdx: number = 0;
 
+  @state()
+  _timeshiftOffset = 0;
+
+  @state()
+  _bufferDuration = 0;
+
+  @state()
+  _isAtLive = true;
+
   private static _video = document.createElement('video');
   private static _caption = document.createElement('div');
   private static _track = VideoPlayer._video.addTextTrack('captions');
@@ -99,13 +108,17 @@ export class VideoPlayer extends LitElement {
   private _mediaRecoveryAttempt = 0;
   private _networkRecoveryAttempt = 0;
   private _stalledCount = 0;
+  private _rafId?: number;
+  private _timeshiftEnabled = !!(window.__appConfig?.timeshift?.isEnabled);
   private _hls = new Hls({
     renderTextTracksNatively: false,
     subtitlePreference: {
       default: false
     },
     enableCEA708Captions: window.__appConfig?.caption?.isEnableCEA708,
-    backBufferLength: 30,
+    backBufferLength: window.__appConfig?.timeshift?.isEnabled
+      ? (window.__appConfig?.timeshift?.bufferMinutes ?? 30) * 60
+      : 30,
     maxBufferLength: 20,
     capLevelToPlayerSize: true,
     startLevel: -1
@@ -291,10 +304,12 @@ export class VideoPlayer extends LitElement {
     };
     this._volume = VideoPlayer._video.volume;
     this._isMuted = VideoPlayer._video.muted;
+    this._startTimeshiftLoop();
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this._stopTimeshiftLoop();
     window.removeEventListener('blur', this._hideControl);
     window.removeEventListener('focus', this._showControlAndResetIdle);
     window.removeEventListener('keydown', this._handleGlobalShortcut);
@@ -309,6 +324,70 @@ export class VideoPlayer extends LitElement {
     navigator.mediaSession.setActionHandler('pause', null);
     navigator.mediaSession.setActionHandler('stop', null);
   }
+
+  private _formatDuration = (secs: number): string => {
+    const totalSecs = Math.floor(Math.abs(secs));
+    const h = Math.floor(totalSecs / 3600);
+    const m = Math.floor((totalSecs % 3600) / 60);
+    const s = totalSecs % 60;
+    if (h > 0) {
+      return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    return `${m}:${String(s).padStart(2, '0')}`;
+  };
+
+  private _startTimeshiftLoop = () => {
+    if (!this._timeshiftEnabled) return;
+    const update = () => {
+      const video = VideoPlayer._video;
+      if (video.buffered.length > 0) {
+        const liveEdge = video.buffered.end(video.buffered.length - 1);
+        const bufferStart = video.buffered.start(0);
+        this._bufferDuration = Math.max(0, liveEdge - bufferStart);
+        this._timeshiftOffset = Math.max(0, liveEdge - video.currentTime);
+        this._isAtLive = this._timeshiftOffset < 3;
+      }
+      this._rafId = requestAnimationFrame(update);
+    };
+    this._rafId = requestAnimationFrame(update);
+  };
+
+  private _stopTimeshiftLoop = () => {
+    if (this._rafId !== undefined) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = undefined;
+    }
+  };
+
+  private _seekToPosition = (posInBuffer: number) => {
+    const video = VideoPlayer._video;
+    if (video.buffered.length === 0) return;
+    const liveEdge = video.buffered.end(video.buffered.length - 1);
+    const bufferStart = video.buffered.start(0);
+    video.currentTime = Math.min(Math.max(bufferStart + posInBuffer, bufferStart), liveEdge);
+  };
+
+  private _seekRelative = (deltaSecs: number) => {
+    if (!this._timeshiftEnabled) return;
+    const video = VideoPlayer._video;
+    if (video.buffered.length === 0) return;
+    const liveEdge = video.buffered.end(video.buffered.length - 1);
+    const bufferStart = video.buffered.start(0);
+    video.currentTime = Math.min(Math.max(video.currentTime + deltaSecs, bufferStart), liveEdge);
+  };
+
+  private _goLive = () => {
+    const video = VideoPlayer._video;
+    if (video.buffered.length === 0) return;
+    const liveEdge = video.buffered.end(video.buffered.length - 1);
+    video.currentTime = liveEdge;
+    if (!this._isPlaying) video.play();
+  };
+
+  private _onTimeshiftSeek = (e: Event) => {
+    const val = Number((e.target as HTMLInputElement).value);
+    this._seekToPosition(val);
+  };
 
   private _loadData = async (channelId: string) => {
     if (channelId) {
@@ -611,6 +690,27 @@ export class VideoPlayer extends LitElement {
         event.preventDefault();
         this._toggleMuted();
         break;
+
+      case 'ArrowLeft':
+        if (this._timeshiftEnabled) {
+          event.preventDefault();
+          this._seekRelative(-30);
+        }
+        break;
+
+      case 'ArrowRight':
+        if (this._timeshiftEnabled) {
+          event.preventDefault();
+          this._seekRelative(30);
+        }
+        break;
+
+      case 'End':
+        if (this._timeshiftEnabled) {
+          event.preventDefault();
+          this._goLive();
+        }
+        break;
     }
   };
 
@@ -746,6 +846,73 @@ export class VideoPlayer extends LitElement {
       bottom: 0px;
       opacity: 1;
     }
+    .timeshift-bar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 0 10px 0;
+    }
+    .ts-time {
+      min-width: 72px;
+      text-align: right;
+      font-size: 0.82rem;
+      font-variant-numeric: tabular-nums;
+      color: #c082ff;
+      letter-spacing: 0.03em;
+      font-weight: 600;
+    }
+    .ts-live {
+      min-width: 64px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      border: 1px solid #555577;
+      background: transparent;
+      color: #aaaacc;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: background 0.25s, color 0.25s, border-color 0.25s;
+      white-space: nowrap;
+    }
+    .ts-live:hover {
+      border-color: #c082ff;
+      color: #c082ff;
+    }
+    .ts-live.is-live {
+      background: #e53935;
+      border-color: #e53935;
+      color: #fff;
+    }
+    .ts-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.15);
+      outline: none;
+      cursor: pointer;
+      transition: height 0.15s;
+    }
+    .ts-slider:hover {
+      height: 6px;
+    }
+    .ts-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #c082ff;
+      box-shadow: 0 0 6px #c082ff88;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .ts-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.35);
+      box-shadow: 0 0 10px #c082ffbb;
+    }
     .main-control {
       justify-content: center;
       display: flex;
@@ -824,6 +991,21 @@ export class VideoPlayer extends LitElement {
           ></channel-list>
         </aside>
         <footer>
+          ${this._timeshiftEnabled ? html`
+            <div class="timeshift-bar">
+              <span class="ts-time">${this._isAtLive ? '' : '-' + this._formatDuration(this._timeshiftOffset)}</span>
+              <input
+                type="range"
+                class="ts-slider"
+                min="0"
+                max="${Math.round(this._bufferDuration)}"
+                step="1"
+                .value="${String(Math.round(Math.max(0, this._bufferDuration - this._timeshiftOffset)))}"
+                @input=${this._onTimeshiftSeek}
+              />
+              <button class="ts-live ${this._isAtLive ? 'is-live' : ''}" @click=${this._goLive}>● LIVE</button>
+            </div>
+          ` : ''}
           <div></div>
           <div class="main-control">
             <app-button class="circle icon" @click=${() => dispatchEvent(ECustomEvent.prevChannel)}>
