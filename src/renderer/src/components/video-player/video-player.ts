@@ -345,7 +345,7 @@ export class VideoPlayer extends LitElement {
         const bufferStart = video.buffered.start(0);
         this._bufferDuration = Math.max(0, liveEdge - bufferStart);
         this._timeshiftOffset = Math.max(0, liveEdge - video.currentTime);
-        this._isAtLive = this._timeshiftOffset < 3;
+        this._isAtLive = this._timeshiftOffset < 6; // 6 second grace period for 'Live'
       }
       this._rafId = requestAnimationFrame(update);
     };
@@ -993,7 +993,9 @@ export class VideoPlayer extends LitElement {
         <footer>
           ${this._timeshiftEnabled ? html`
             <div class="timeshift-bar">
-              <span class="ts-time">${this._isAtLive ? '' : '-' + this._formatDuration(this._timeshiftOffset)}</span>
+              <span class="ts-time" style="${this._isAtLive ? 'color: #ff4444;' : ''}">
+                ${this._isAtLive ? 'LIVE' : '-' + this._formatDuration(this._timeshiftOffset)}
+              </span>
               <input
                 type="range"
                 class="ts-slider"
