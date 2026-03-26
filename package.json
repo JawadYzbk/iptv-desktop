@@ -1,6 +1,6 @@
 {
   "name": "iptv-desktop",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "type": "module",
   "description": "Play IPTV from your desktop.",
   "main": "./out/main/index.js",
